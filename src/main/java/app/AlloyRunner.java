@@ -16,6 +16,7 @@ import java.util.*;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.util.concurrent.*;
+import kodkod.engine.satlab.SATFactory;
 
 public class AlloyRunner {
 
@@ -167,77 +168,40 @@ public class AlloyRunner {
   private static void setSolver(A4Options opt, SolveRequest req) {
     String requested = (req != null && req.options != null && req.options.solver != null)
         ? req.options.solver
-        : "SAT4J";
-    try {
-      Class<?> solverEnum = null;
-      for (Class<?> c : A4Options.class.getDeclaredClasses()) {
-        if (c.isEnum() && c.getSimpleName().toLowerCase().contains("solver")) { solverEnum = c; break; }
-      }
-      if (solverEnum == null) return;
+        : "minisat.prover";
 
-      Object[] constants = solverEnum.getEnumConstants();
-      Object chosen = null;
-      for (Object constant : constants) {
-        try {
-          String byName = ((Enum<?>) constant).name();
-          if (byName.equalsIgnoreCase(requested)) { chosen = constant; break; }
-        } catch (Exception ignore) {}
-        try {
-          java.lang.reflect.Method idm = constant.getClass().getMethod("id");
-          Object idVal = idm.invoke(constant);
-          if (idVal != null && requested.equalsIgnoreCase(String.valueOf(idVal))) { chosen = constant; break; }
-        } catch (Exception ignore) {}
-        try {
-          String ts = String.valueOf(constant);
-          if (ts.equalsIgnoreCase(requested)) { chosen = constant; break; }
-        } catch (Exception ignore) {}
-      }
-      if (chosen == null) {
-        for (Object constant : constants) {
-          try { if (((Enum<?>) constant).name().equalsIgnoreCase("SAT4J")) { chosen = constant; break; } } catch (Exception ignore) {}
-          try {
-            java.lang.reflect.Method idm = constant.getClass().getMethod("id");
-            Object idVal = idm.invoke(constant);
-            if ("SAT4J".equalsIgnoreCase(String.valueOf(idVal))) { chosen = constant; break; }
-          } catch (Exception ignore) {}
-        }
-      }
-      if (chosen != null) {
-        try {
-          java.lang.reflect.Method m = A4Options.class.getMethod("setSolver", solverEnum);
-          m.setAccessible(true);
-          m.invoke(opt, chosen);
-          return;
-        } catch (NoSuchMethodException nsme) {
-          try {
-            java.lang.reflect.Field f = A4Options.class.getField("solver");
-            f.setAccessible(true);
-            f.set(opt, chosen);
-            return;
-          } catch (Exception ignore) {}
-        }
-      }
-    } catch (Exception ignore) {}
+    // Normalize common legacy names to Alloy 6.2 ids
+    String normalized = normalizeSolverId(requested);
+
+    SATFactory solver;
+    try {
+      solver = SATFactory.get(normalized);
+    } catch (IllegalArgumentException e) {
+      throw new IllegalStateException("Requested solver not found: " + normalized
+          + "; available=" + SATFactory.getSolvers(), e);
+    }
+    if (!solver.isPresent() || !solver.prover()) {
+      throw new IllegalStateException("Prover solver unavailable: " + solver.id());
+    }
+    opt.solver = solver;
+  }
+
+  private static String normalizeSolverId(String id) {
+    if (id == null) return "minisat.prover";
+    String s = id.trim();
+    if (s.equalsIgnoreCase("MiniSatProverJNI") || s.equalsIgnoreCase("MiniSatProver")
+        || s.equalsIgnoreCase("MINISAT_PROVER") || s.equalsIgnoreCase("MINISAT.PROVER")) {
+      return "minisat.prover";
+    }
+    if (s.equalsIgnoreCase("SAT4J") || s.equalsIgnoreCase("sat4j")) {
+      return "sat4j"; // SATFactory id for default SAT4J
+    }
+    return s;
   }
 
   private static String getSolverId(A4Options opt) {
     try {
-      Object v = null;
-      try {
-        java.lang.reflect.Method getter = A4Options.class.getMethod("getSolver");
-        getter.setAccessible(true);
-        v = getter.invoke(opt);
-      } catch (NoSuchMethodException nsme) {
-        java.lang.reflect.Field f = A4Options.class.getField("solver");
-        f.setAccessible(true);
-        v = f.get(opt);
-      }
-      if (v == null) return null;
-      try {
-        return (String) v.getClass().getMethod("id").invoke(v);
-      } catch (Exception e) {
-        return v.toString();
-      }
+      return (opt != null && opt.solver != null) ? opt.solver.id() : null;
     } catch (Exception e) { return null; }
   }
 

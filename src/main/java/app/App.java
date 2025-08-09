@@ -47,6 +47,7 @@ public class App {
 
   private static int runSelfCheck() {
     try {
+      try { listAvailableSolvers(); } catch (Throwable ignored) {}
       // Make the check UNSAT by asserting no A with exactly 0 A (assertion holds; no counterexample)
       String spec = "sig A {}\n\nassert noA { no A }\ncheck noA for exactly 0 A\n";
       app.dto.SolveRequest req = new app.dto.SolveRequest();
@@ -54,12 +55,13 @@ public class App {
       req.command = "check";
       req.target = "noA";
       req.options = new app.dto.SolveRequest.Options();
-      req.options.solver = "MiniSatProverJNI";
+      req.options.solver = "minisat.prover";
 
       app.dto.SolveResponse resp = app.AlloyRunner.solve(req);
       boolean okEnvelope = "ok".equals(resp.status);
       boolean isUnsat = Boolean.FALSE.equals(resp.satisfiable);
-      boolean solverIsProver = resp.debug != null && "MiniSatProverJNI".equals(resp.debug.solverId);
+      String sid = (resp.debug != null ? resp.debug.solverId : null);
+      boolean solverIsProver = sid != null && (sid.equalsIgnoreCase("minisat.prover") || sid.equals("MiniSatProverJNI"));
       boolean hasCore = resp.unsatCore != null;
       boolean coreNonEmpty = hasCore && (
           (resp.unsatCore.must != null && !resp.unsatCore.must.isEmpty()) ||
@@ -68,12 +70,12 @@ public class App {
       );
 
       if (okEnvelope && isUnsat && solverIsProver && coreNonEmpty) {
-        System.out.println("self-check ok: MiniSatProverJNI loaded, UNSAT core available");
+        System.out.println("self-check ok: minisat.prover loaded, UNSAT core available");
         return 0;
       } else {
         System.out.println("self-check FAILED: status=" + resp.status
             + ", satisfiable=" + resp.satisfiable
-            + ", solverId=" + (resp.debug!=null?resp.debug.solverId:null)
+            + ", solverId=" + sid
             + ", corePresent=" + (resp.unsatCore!=null)
             + ", coreNonEmpty=" + coreNonEmpty);
         return 2;
@@ -82,5 +84,23 @@ public class App {
       System.out.println("self-check ERROR: " + t.getMessage());
       return 3;
     }
+  }
+
+  private static void listAvailableSolvers() {
+    try {
+      Class<?> a4 = Class.forName("edu.mit.csail.sdg.translator.A4Options");
+      for (Class<?> c : a4.getDeclaredClasses()) {
+        if (c.isEnum() && c.getSimpleName().toLowerCase().contains("solver")) {
+          Object[] constants = c.getEnumConstants();
+          System.out.println("Solvers:" );
+          for (Object constant : constants) {
+            String name = ((Enum<?>) constant).name();
+            String id = null;
+            try { id = String.valueOf(constant.getClass().getMethod("id").invoke(constant)); } catch (Exception ignore) {}
+            System.out.println(" - name=" + name + ", id=" + id);
+          }
+        }
+      }
+    } catch (Exception ignored) {}
   }
 }
