@@ -1,8 +1,6 @@
 sig A {}
 
-fact { no A }
-
-assert someA { some A }
-check someA for exactly 0 A
+// UNSAT: run expression with contradictory scope
+run { no A } for exactly 1 A
 
 

@@ -77,7 +77,8 @@ public class AlloyRunner {
     if (req.model.contains("open ")) {
       out.warnings.add("open statements are ignored in single-module mode");
     }
-    Module world = CompUtil.parseOneModule(req.model);
+    // Alloy 6: parse via file-based API to ensure correct typechecking
+    Module world = CompUtil.parseEverything_fromString(A4Reporter.NOP, req.model);
     List<Command> cmds = world.getAllCommands();
     Command choice = chooseCommand(cmds, req.commandLabel, req.commandIndex);
     out.command = choice.toString();

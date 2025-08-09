@@ -14,7 +14,7 @@ public class AlloyRunnerNativeTest {
   @Test
   @Timeout(15)
   void unsat_core_available_with_minisatproverjni() throws Exception {
-    String model = "sig A {}\n\nfact { no A }\n\nassert someA { some A }\ncheck someA for 3\n";
+    String model = "sig A {}\n\nassert someA { some A }\ncheck someA for exactly 0 A\n";
     SolveRequest req = new SolveRequest();
     req.model = model;
     req.options = new SolveRequest.Options();
