@@ -1,0 +1,46 @@
+---
+description: "Kanban board maintenance rules (auto-attach on KANBAN.md)."
+# Auto-attach this rule when KANBAN.md is referenced
+globs:
+  - "KANBAN.md"
+alwaysApply: false
+---
+
+# Kanban Board Maintenance (for Cursor Agent)
+
+GOAL
+
+- Treat `## Registry` as the single source of truth. `## Board` is always derived from it.
+- Only perform the allowed operations below; never free-form edit the Board.
+
+ALLOWED OPERATIONS
+
+1) ADD_CARD: Add to `## Registry` with required fields (ID, Title, Status, Assignee, Links, Notes).
+2) MOVE_CARD: Change `Status` in `## Registry` only; then regenerate the `## Board` section from `## Registry`.
+3) EDIT_CARD: Update fields in `## Registry`; then regenerate `## Board`.
+4) ARCHIVE_CARD: Move cards with `Status: Done` older than 7 days to `## Archive` (append-only).
+5) RENDER_BOARD: Rebuild the whole `## Board` from `## Registry`.
+
+RENDERING RULES
+
+- Columns: Backlog | Doing | Review | Done (in that order).
+- Each card shows: `[ID] Title — Assignee` on one line; links on the next line (optional).
+- Do not drop metadata from the Registry when rendering the Board.
+- If a card lacks an ID, generate one like `K-YYYYMMDD-###`.
+
+CHECKS BEFORE COMMIT
+
+- Ensure unique IDs in `## Registry`.
+- Ensure every card has a `Status` that matches one of the Board columns.
+- Rebuild `## Board` 1:1 from `## Registry` (no manual edits inside `## Board`).
+
+EDITING PROTOCOL
+
+- Apply operations to `## Registry` first.
+- Only then run RENDER_BOARD to refresh `## Board`.
+- Leave `## Instructions for AI Agents` untouched except when explicitly asked.
+
+AUDIT TRAIL
+
+- Add a short "Changelog" subsection at the bottom with bullet points:
+  - `YYYY-MM-DD [AgentName]: OPERATION details...`
