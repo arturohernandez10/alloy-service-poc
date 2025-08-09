@@ -1,0 +1,28 @@
+-------------------------------------------------------------------------------
+Test set: app.AlloyRunnerTest
+-------------------------------------------------------------------------------
+Tests run: 3, Failures: 2, Errors: 0, Skipped: 0, Time elapsed: 0.328 s <<< FAILURE! -- in app.AlloyRunnerTest
+app.AlloyRunnerTest.unsat_model_returns_unsat_without_core_on_sat4j -- Time elapsed: 0.264 s <<< FAILURE!
+org.opentest4j.AssertionFailedError: expected UNSAT ==> expected: <UNSAT> but was: <ERROR>
+	at org.junit.jupiter.api.AssertionFailureBuilder.build(AssertionFailureBuilder.java:151)
+	at org.junit.jupiter.api.AssertionFailureBuilder.buildAndThrow(AssertionFailureBuilder.java:132)
+	at org.junit.jupiter.api.AssertEquals.failNotEqual(AssertEquals.java:197)
+	at org.junit.jupiter.api.AssertEquals.assertEquals(AssertEquals.java:182)
+	at org.junit.jupiter.api.Assertions.assertEquals(Assertions.java:1156)
+	at app.AlloyRunnerTest.unsat_model_returns_unsat_without_core_on_sat4j(AlloyRunnerTest.java:38)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:569)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1511)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1511)
+
+app.AlloyRunnerTest.sat_model_returns_sat_and_instance -- Time elapsed: 0 s <<< FAILURE!
+org.opentest4j.AssertionFailedError: expected SAT ==> expected: <SAT> but was: <ERROR>
+	at org.junit.jupiter.api.AssertionFailureBuilder.build(AssertionFailureBuilder.java:151)
+	at org.junit.jupiter.api.AssertionFailureBuilder.buildAndThrow(AssertionFailureBuilder.java:132)
+	at org.junit.jupiter.api.AssertEquals.failNotEqual(AssertEquals.java:197)
+	at org.junit.jupiter.api.AssertEquals.assertEquals(AssertEquals.java:182)
+	at org.junit.jupiter.api.Assertions.assertEquals(Assertions.java:1156)
+	at app.AlloyRunnerTest.sat_model_returns_sat_and_instance(AlloyRunnerTest.java:23)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:569)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1511)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1511)
+
