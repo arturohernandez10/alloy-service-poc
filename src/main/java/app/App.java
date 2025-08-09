@@ -55,12 +55,13 @@ public class App {
       req.command = "check";
       req.target = "noA";
       req.options = new app.dto.SolveRequest.Options();
-      req.options.solver = "MiniSatProverJNI";
+      req.options.solver = "minisat.prover";
 
       app.dto.SolveResponse resp = app.AlloyRunner.solve(req);
       boolean okEnvelope = "ok".equals(resp.status);
       boolean isUnsat = Boolean.FALSE.equals(resp.satisfiable);
-      boolean solverIsProver = resp.debug != null && "MiniSatProverJNI".equals(resp.debug.solverId);
+      String sid = (resp.debug != null ? resp.debug.solverId : null);
+      boolean solverIsProver = sid != null && (sid.equalsIgnoreCase("minisat.prover") || sid.equals("MiniSatProverJNI"));
       boolean hasCore = resp.unsatCore != null;
       boolean coreNonEmpty = hasCore && (
           (resp.unsatCore.must != null && !resp.unsatCore.must.isEmpty()) ||
@@ -69,12 +70,12 @@ public class App {
       );
 
       if (okEnvelope && isUnsat && solverIsProver && coreNonEmpty) {
-        System.out.println("self-check ok: MiniSatProverJNI loaded, UNSAT core available");
+        System.out.println("self-check ok: minisat.prover loaded, UNSAT core available");
         return 0;
       } else {
         System.out.println("self-check FAILED: status=" + resp.status
             + ", satisfiable=" + resp.satisfiable
-            + ", solverId=" + (resp.debug!=null?resp.debug.solverId:null)
+            + ", solverId=" + sid
             + ", corePresent=" + (resp.unsatCore!=null)
             + ", coreNonEmpty=" + coreNonEmpty);
         return 2;
