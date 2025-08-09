@@ -1,13 +1,18 @@
 package app.dto;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import java.util.*;
 
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class SolveResponse {
   public String requestId;
-  public String status;
+  public String status; // ok | timeout | error (envelope)
+  public Boolean satisfiable; // null when status=error
   public String command;
   public List<Map<String,Object>> instances;
-  public UnsatCore core;
+  @JsonProperty("unsat_core")
+  public UnsatCore unsatCore;
   public List<String> warnings = new ArrayList<>();
   public Debug debug;
   public ErrorInfo error;

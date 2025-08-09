@@ -14,18 +14,19 @@ public class AlloyRunnerNativeTest {
   @Test
   @Timeout(15)
   void unsat_core_available_with_minisatproverjni() throws Exception {
-    String model = "sig A {}\n\nassert someA { some A }\ncheck someA for exactly 0 A\n";
+    String spec = "sig A {}\n\nassert someA { some A }\ncheck someA for exactly 0 A\n";
     SolveRequest req = new SolveRequest();
-    req.model = model;
+    req.spec = spec;
     req.options = new SolveRequest.Options();
     req.options.solver = "MiniSatProverJNI"; // requires native libs (Linux container)
 
     SolveResponse resp = AlloyRunner.solve(req);
-    assertEquals("UNSAT", resp.status, "expected UNSAT");
-    assertNotNull(resp.core, "unsat core should be present with MiniSatProverJNI");
-    assertNotNull(resp.core.must);
-    assertNotNull(resp.core.maybe);
-    assertNotNull(resp.core.low);
+    assertEquals("ok", resp.status, "expected ok envelope for UNSAT");
+    assertEquals(Boolean.FALSE, resp.satisfiable, "expected satisfiable=false for UNSAT");
+    assertNotNull(resp.unsatCore, "unsat core should be present with MiniSatProverJNI");
+    assertNotNull(resp.unsatCore.must);
+    assertNotNull(resp.unsatCore.maybe);
+    assertNotNull(resp.unsatCore.low);
   }
 }
 

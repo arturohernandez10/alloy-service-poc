@@ -37,22 +37,20 @@ public class AlloyRunner {
     out.requestId = req.requestId;
 
     // Basic request validation and caps
-    if (req == null || req.model == null || req.model.isBlank()) {
-      return error("bad_request", "model is required");
+    if (req == null || req.spec == null || req.spec.isBlank()) {
+      return error("bad_request", "spec is required");
     }
-    if (req.model.length() > MAX_MODEL_CHARS) {
+    if (req.spec.length() > MAX_MODEL_CHARS) {
       return error("bad_request", "model too large");
-    }
-    if (req.maxInstances != null && req.maxInstances > MAX_INSTANCES) {
-      out.warnings.add("maxInstances capped to " + MAX_INSTANCES);
-      req.maxInstances = MAX_INSTANCES;
     }
 
     // Hash model for observability (no raw model in logs)
     out.debug = new SolveResponse.Debug();
-    out.debug.modelHash = sha256Hex(req.model);
+    out.debug.modelHash = sha256Hex(req.spec);
 
-    long timeoutMs = DEFAULT_TIMEOUT_MS;
+    long timeoutMs = (req.options != null && req.options.timeoutMs != null && req.options.timeoutMs > 0)
+        ? req.options.timeoutMs.longValue()
+        : DEFAULT_TIMEOUT_MS;
     Callable<SolveResponse> task = () -> executeSolve(req, started, out);
 
     Future<SolveResponse> f = EXECUTOR.submit(task);
@@ -68,19 +66,28 @@ public class AlloyRunner {
       String msg = cause != null ? cause.getMessage() : ee.getMessage();
       return errorWithDebug(out, started, "solver_error", msg);
     } catch (RejectedExecutionException ree) {
-      return errorWithDebug(out, started, "timeout", "server busy");
+      return errorWithDebug(out, started, "busy", "server busy");
     }
   }
 
   private static SolveResponse executeSolve(SolveRequest req, long started, SolveResponse out) throws Exception {
+    // compute requested instance cap from scope (default 1)
+    int requestedMaxInstances = 1;
+    if (req.scope != null && req.scope.maxInstances != null && req.scope.maxInstances > 0) {
+      requestedMaxInstances = req.scope.maxInstances;
+    }
+    if (requestedMaxInstances > MAX_INSTANCES) {
+      out.warnings.add("max_instances capped to " + MAX_INSTANCES);
+      requestedMaxInstances = MAX_INSTANCES;
+    }
     // Strict single-module parsing to block filesystem opens
-    if (req.model.contains("open ")) {
+    if (req.spec.contains("open ")) {
       out.warnings.add("open statements are ignored in single-module mode");
     }
     // Alloy 6: parse via file-based API to ensure correct typechecking
-    Module world = CompUtil.parseEverything_fromString(A4Reporter.NOP, req.model);
+    Module world = CompUtil.parseEverything_fromString(A4Reporter.NOP, req.spec);
     List<Command> cmds = world.getAllCommands();
-    Command choice = chooseCommand(cmds, req.commandLabel, req.commandIndex);
+    Command choice = chooseCommand(cmds, req.target, req.commandIndex, req.command);
     out.command = choice.toString();
 
     A4Options opt = new A4Options();
@@ -88,18 +95,23 @@ public class AlloyRunner {
     opt.coreGranularity = orDefault(req.options != null ? req.options.coreGranularity : null, 1);
     opt.coreMinimization = orDefault(req.options != null ? req.options.coreMinimization : null, 2);
     opt.unrolls = orDefault(req.options != null ? req.options.unrolls : null, 3);
-    opt.symmetry = orDefault(req.options != null ? req.options.symmetry : null, 20);
+    // symmetry breaking knob (new name)
+    Integer sym = (req.options != null) ? req.options.symmetryBreaking : null;
+    opt.symmetry = orDefault(sym, 20);
     opt.recordKodkod = req.options != null && Boolean.TRUE.equals(req.options.recordKodkod);
     opt.originalFilename = "input.als";
 
     Command adjusted = choice;
-    if (req.bitwidth != null || req.maxSeq != null) {
-      out.warnings.add("bitwidth/maxSeq overrides are not supported in this build");
-    }
-    if (req.exactScopes != null) {
-      for (Sig s : world.getAllReachableSigs()) {
-        Integer n = req.exactScopes.get(s.label);
-        if (n != null) adjusted = adjusted.change(s, true, n);
+    // Apply scope overrides if provided
+    if (req.scope != null) {
+      if (req.scope.bitwidth != null) {
+        out.warnings.add("bitwidth override not wired to Command in this build");
+      }
+      if (req.scope.exactScopes != null) {
+        for (Sig s : world.getAllReachableSigs()) {
+          Integer n = req.scope.exactScopes.get(s.label);
+          if (n != null) adjusted = adjusted.change(s, true, n);
+        }
       }
     }
 
@@ -107,17 +119,19 @@ public class AlloyRunner {
     List<Map<String,Object>> instances = new ArrayList<>();
     A4Solution sol = TranslateAlloyToKodkod.execute_command(NOP, world.getAllReachableSigs(), adjusted, opt);
     if (sol.satisfiable()) {
-      int max = Math.max(1, orDefault(req.maxInstances, 1));
+      int max = Math.max(1, requestedMaxInstances);
       int produced = 0;
       while (!Thread.currentThread().isInterrupted() && sol.satisfiable() && produced < max) {
         instances.add(serializeInstance(world, sol));
         produced++;
         sol = sol.next();
       }
-      out.status = "SAT";
+      out.status = "ok";
+      out.satisfiable = true;
     } else {
-      out.status = "UNSAT";
-      out.core = buildCore(req.model, sol);
+      out.status = "ok";
+      out.satisfiable = false;
+      out.unsatCore = buildCore(req.spec, sol);
     }
     out.instances = instances;
     out.debug.solverId = getSolverId(opt);
@@ -131,10 +145,19 @@ public class AlloyRunner {
     return out;
   }
 
-  private static Command chooseCommand(List<Command> cmds, String label, Integer idx) {
+  private static Command chooseCommand(List<Command> cmds, String label, Integer idx, String kind) {
+    // Optional filter by kind ("run" vs "check") when label is absent
     if (label != null) {
       for (Command c : cmds) {
         if (c.label != null && c.label.equals(label)) return c;
+      }
+    }
+    if (kind != null) {
+      for (Command c : cmds) {
+        boolean isCheck = c.check;
+        if (("check".equalsIgnoreCase(kind) && isCheck) || ("run".equalsIgnoreCase(kind) && !isCheck)) {
+          return c;
+        }
       }
     }
     int i = (idx != null && idx >= 0 && idx < cmds.size()) ? idx : 0;
@@ -252,7 +275,7 @@ public class AlloyRunner {
 
   private static SolveResponse error(String type, String message) {
     SolveResponse r = new SolveResponse();
-    r.status = "ERROR";
+    r.status = "error";
     r.error = new SolveResponse.ErrorInfo();
     r.error.type = type;
     r.error.message = message;
@@ -261,7 +284,7 @@ public class AlloyRunner {
 
   private static SolveResponse errorWithDebug(SolveResponse base, long started, String type, String message) {
     SolveResponse r = base != null ? base : new SolveResponse();
-    r.status = "ERROR";
+    r.status = "timeout".equals(type) ? "timeout" : "error";
     r.error = new SolveResponse.ErrorInfo();
     r.error.type = type;
     r.error.message = message;

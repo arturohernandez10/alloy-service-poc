@@ -17,7 +17,7 @@ public class App {
         ctx.json(resp);
       } catch (Exception e) {
         SolveResponse err = new SolveResponse();
-        err.status = "ERROR";
+        err.status = "error";
         err.error = new SolveResponse.ErrorInfo();
         err.error.type = "bad_request";
         err.error.message = e.getMessage();
