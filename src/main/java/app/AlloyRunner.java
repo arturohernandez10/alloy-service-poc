@@ -165,36 +165,56 @@ public class AlloyRunner {
   }
 
   private static void setSolver(A4Options opt, SolveRequest req) {
-    String id = (req != null && req.options != null && req.options.solver != null) ? req.options.solver : "SAT4J";
+    String requested = (req != null && req.options != null && req.options.solver != null)
+        ? req.options.solver
+        : "SAT4J";
     try {
-      // Find the enum type inside A4Options named *Solver
-      Class<?>[] inners = A4Options.class.getDeclaredClasses();
       Class<?> solverEnum = null;
-      for (Class<?> c : inners) {
+      for (Class<?> c : A4Options.class.getDeclaredClasses()) {
         if (c.isEnum() && c.getSimpleName().toLowerCase().contains("solver")) { solverEnum = c; break; }
       }
-      if (solverEnum != null) {
-        Object chosen = null;
-        try { chosen = Enum.valueOf((Class)solverEnum, id); } catch (Exception ignore) {}
-        if (chosen == null) {
-          try { chosen = Enum.valueOf((Class)solverEnum, "SAT4J"); } catch (Exception ignore) {}
-        }
-        if (chosen != null) {
-          // Prefer setter if available
+      if (solverEnum == null) return;
+
+      Object[] constants = solverEnum.getEnumConstants();
+      Object chosen = null;
+      for (Object constant : constants) {
+        try {
+          String byName = ((Enum<?>) constant).name();
+          if (byName.equalsIgnoreCase(requested)) { chosen = constant; break; }
+        } catch (Exception ignore) {}
+        try {
+          java.lang.reflect.Method idm = constant.getClass().getMethod("id");
+          Object idVal = idm.invoke(constant);
+          if (idVal != null && requested.equalsIgnoreCase(String.valueOf(idVal))) { chosen = constant; break; }
+        } catch (Exception ignore) {}
+        try {
+          String ts = String.valueOf(constant);
+          if (ts.equalsIgnoreCase(requested)) { chosen = constant; break; }
+        } catch (Exception ignore) {}
+      }
+      if (chosen == null) {
+        for (Object constant : constants) {
+          try { if (((Enum<?>) constant).name().equalsIgnoreCase("SAT4J")) { chosen = constant; break; } } catch (Exception ignore) {}
           try {
-            java.lang.reflect.Method m = A4Options.class.getMethod("setSolver", solverEnum);
-            m.setAccessible(true);
-            m.invoke(opt, chosen);
+            java.lang.reflect.Method idm = constant.getClass().getMethod("id");
+            Object idVal = idm.invoke(constant);
+            if ("SAT4J".equalsIgnoreCase(String.valueOf(idVal))) { chosen = constant; break; }
+          } catch (Exception ignore) {}
+        }
+      }
+      if (chosen != null) {
+        try {
+          java.lang.reflect.Method m = A4Options.class.getMethod("setSolver", solverEnum);
+          m.setAccessible(true);
+          m.invoke(opt, chosen);
+          return;
+        } catch (NoSuchMethodException nsme) {
+          try {
+            java.lang.reflect.Field f = A4Options.class.getField("solver");
+            f.setAccessible(true);
+            f.set(opt, chosen);
             return;
-          } catch (NoSuchMethodException nsme) {
-            // Fall back to public field
-            try {
-              java.lang.reflect.Field f = A4Options.class.getField("solver");
-              f.setAccessible(true);
-              f.set(opt, chosen);
-              return;
-            } catch (Exception ignore) {}
-          }
+          } catch (Exception ignore) {}
         }
       }
     } catch (Exception ignore) {}

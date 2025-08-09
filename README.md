@@ -501,7 +501,7 @@ You should see `"status": "UNSAT"` and `core.must/core.maybe` populated with fil
 ### Dockerfile
 
 ```dockerfile
-FROM eclipse-temurin:17-jre
+FROM eclipse-temurin:17.0.11_9-jre-jammy
 WORKDIR /app
 COPY target/alloy-service-poc-0.1.0.jar /app/app.jar
 ENV JAVA_TOOL_OPTIONS="-Djava.library.path=/usr/lib:/app"
@@ -516,6 +516,22 @@ mvn -q -DskipTests package
 docker build -t alloy-poc:latest .
 docker run --rm -p 8080:8080 alloy-poc:latest
 ```
+
+### Self-check
+
+Verify native solver availability (unsat core path) locally or in CI:
+
+```bash
+# via CLI arg
+java -jar target/alloy-service-poc-0.1.0.jar --self-check
+
+# or inside Docker
+docker run --rm alloy-poc:latest --self-check
+
+# or with env var
+docker run --rm -e SELF_CHECK=1 alloy-poc:latest
+```
+The command exits 0 on success and non-zero if MiniSatProverJNI is unavailable or unsat-core cannot be retrieved.
 
 **Azure Container Apps** (example):
 

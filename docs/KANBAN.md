@@ -25,7 +25,7 @@
 
 - ID: K-20250809-010
   - Title: Container and CI – pin versions and self-check
-  - Status: Backlog
+  - Status: Doing
   - Assignee: Unassigned
   - Priority: P2
   - Size: M
@@ -37,6 +37,7 @@
     - Image pins Alloy 6.2.x; startup self-check verifies solver libs; CI builds/tests and pushes image.
   - Notes:
     - 2025-08-09: Add CI and container self-check.
+    - 2025-08-09: Implemented self-check in `app.App` (`--self-check`/`SELF_CHECK=1`), pinned Docker base image, added GitHub Actions workflow (build/test, build image, run self-check, push on main), updated README.
 
 - ID: K-20250809-002
   - Title: Per-request timeout and deterministic seed
@@ -214,8 +215,6 @@
 
 ### Backlog
 
-- [K-20250809-010] Container and CI – pin versions and self-check — Unassigned
-  - Links: `Dockerfile`, `pom.xml`, `README.md`
 - [K-20250809-002] Per-request timeout and deterministic seed — Unassigned
   - Links: `src/main/java/app/AlloyRunner.java`, `docs/PROJECT.md`
 - [K-20250809-003] Normalize instance serialization (atoms/relations tuples) — Unassigned
@@ -241,6 +240,8 @@
 
 ### Doing
 
+- [K-20250809-010] Container and CI – pin versions and self-check — Unassigned
+  - Links: `Dockerfile`, `pom.xml`, `README.md`
 ### Review
 
 ### Done
@@ -259,3 +260,4 @@
 - 2025-08-09 [GPT-5]: EDIT_CARD K-20250809-001 aligned response field to `unsat_core`, updated tests, verified green build; RENDER_BOARD regenerated.
 - 2025-08-09 [GPT-5]: MOVE_CARD K-20250809-001 to Review; RENDER_BOARD refreshed.
 - 2025-08-09 [GPT-5]: MOVE_CARD K-20250809-001 to Done; EDIT_CARD envelope status to lowercase `error`; RENDER_BOARD refreshed.
+- 2025-08-09 [GPT-5]: EDIT_CARD K-20250809-010 added self-check/CI/README notes; MOVE_CARD to Doing; RENDER_BOARD refreshed.
