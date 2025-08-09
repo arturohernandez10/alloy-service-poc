@@ -464,7 +464,7 @@ build_windows.bat
 mvn -q -DskipTests package
 
 # Run
-java -jar target/alloy-service-poc-0.1.0-shaded.jar
+java -jar target/alloy-service-poc-0.1.0.jar
 # Service listens on :8080 (override with PORT)
 ```
 
@@ -498,13 +498,12 @@ You should see `"status": "UNSAT"` and `core.must/core.maybe` populated with fil
 
 ## 5) Docker & Azure
 
-### `Dockerfile`
+### Dockerfile
 
 ```dockerfile
 FROM eclipse-temurin:17-jre
 WORKDIR /app
-COPY target/alloy-service-poc-0.1.0-shaded.jar /app/app.jar
-# Allow Alloy natives to load
+COPY target/alloy-service-poc-0.1.0.jar /app/app.jar
 ENV JAVA_TOOL_OPTIONS="-Djava.library.path=/usr/lib:/app"
 EXPOSE 8080
 ENTRYPOINT ["java","-jar","/app/app.jar"]
@@ -513,6 +512,7 @@ ENTRYPOINT ["java","-jar","/app/app.jar"]
 Build & run:
 
 ```bash
+mvn -q -DskipTests package
 docker build -t alloy-poc:latest .
 docker run --rm -p 8080:8080 alloy-poc:latest
 ```

@@ -34,18 +34,29 @@ set BUILD_EXIT_CODE=%ERRORLEVEL%
 echo Maven build finished with exit code !BUILD_EXIT_CODE! >> "%LOGFILE%"
 echo. >> "%LOGFILE%"
 
-rem Try to find the shaded JAR produced by the shade plugin
+rem Try to find a runnable JAR (prefer -shaded if present; otherwise normal artifact jar)
 set JAR=
 for /f "delims=" %%F in ('dir /b /a:-d "target\*-shaded.jar" 2^>nul') do (
   set JAR=target\%%F
   goto :after_find_jar
 )
+
+rem Fallback: look for non-shaded artifact jar, excluding original-*
+for /f "delims=" %%F in ('dir /b /a:-d "target\alloy-service-poc-*.jar" 2^>nul') do (
+  set FILE=%%F
+  set PREFIX=!FILE:~0,9!
+  if /I not "!PREFIX!"=="original-" (
+    set JAR=target\!FILE!
+    goto :after_find_jar
+  )
+)
+
 :after_find_jar
 
 if defined JAR (
-  echo Shaded JAR: !JAR! >> "%LOGFILE%"
+  echo Runnable JAR: !JAR! >> "%LOGFILE%"
 ) else (
-  echo Shaded JAR not found in target\ >> "%LOGFILE%"
+  echo No runnable JAR found in target\ >> "%LOGFILE%"
 )
 
 echo Build complete. Log saved to "%LOGFILE%".

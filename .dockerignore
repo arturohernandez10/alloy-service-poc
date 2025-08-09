@@ -1,0 +1,26 @@
+# VCS
+.git
+.gitignore
+
+# Build outputs (exclude all jars; the Dockerfile copies the exact jar path it needs)
+**/target/**
+!target/alloy-service-poc-0.1.0.jar
+
+# Tests and docs not needed for runtime image
+src/test/
+**/*.md
+build-logs/
+*.log
+server.log
+
+# IDE/editor
+.idea/
+.vscode/
+*.iml
+.classpath
+.project
+.settings/
+
+# OS files
+.DS_Store
+Thumbs.db

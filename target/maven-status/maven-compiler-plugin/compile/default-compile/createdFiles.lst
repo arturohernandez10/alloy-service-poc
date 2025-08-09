@@ -1,0 +1,9 @@
+app\App.class
+app\dto\SolveRequest.class
+app\dto\SolveResponse$Range.class
+app\dto\SolveResponse$Debug.class
+app\dto\SolveResponse$UnsatCore.class
+app\AlloyRunner.class
+app\dto\SolveResponse$ErrorInfo.class
+app\dto\SolveRequest$Options.class
+app\dto\SolveResponse.class

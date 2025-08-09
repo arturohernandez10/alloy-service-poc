@@ -1,0 +1,26 @@
+# Build outputs
+target/
+build-logs/
+
+# Logs
+*.log
+server.log
+
+# IDE/editor
+.idea/
+*.iml
+.vscode/
+.classpath
+.project
+.settings/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Misc
+*.swp
+*.swo
+*.bak
+~$*
+
