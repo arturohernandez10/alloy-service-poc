@@ -93,8 +93,39 @@
         <version>3.2.5</version>
         <configuration>
           <useModulePath>false</useModulePath>
+          <!-- JUnit 5 tag filtering: exclude native-tagged tests by default -->
+          <excludedGroups>native</excludedGroups>
         </configuration>
       </plugin>
     </plugins>
   </build>
+
+  <!-- When -Dgroups is provided (e.g., -Dgroups=native), include only those tags
+       and clear the default exclusion. Useful for Linux container CI where
+       native solvers are available. -->
+  <profiles>
+    <profile>
+      <id>with-groups</id>
+      <activation>
+        <property>
+          <name>groups</name>
+        </property>
+      </activation>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-surefire-plugin</artifactId>
+            <version>3.2.5</version>
+            <configuration>
+              <useModulePath>false</useModulePath>
+              <!-- When -Dgroups is provided, include only those tags -->
+              <groups>${groups}</groups>
+              <excludedGroups></excludedGroups>
+            </configuration>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+  </profiles>
 </project>

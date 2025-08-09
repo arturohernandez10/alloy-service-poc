@@ -12,7 +12,7 @@ public class AlloyRunnerTest {
   @Test
   @Timeout(10)
   void sat_model_returns_sat_and_instance() throws Exception {
-    String model = "sig A {}\n\npred p[] { some A }\nrun p for 3\n";
+    String model = new String(java.nio.file.Files.readAllBytes(java.nio.file.Paths.get("src/test/resources/models/sat.als")));
     SolveRequest req = new SolveRequest();
     req.model = model;
     req.maxInstances = 1;
@@ -20,6 +20,9 @@ public class AlloyRunnerTest {
     req.options.solver = "SAT4J"; // portable
 
     SolveResponse resp = AlloyRunner.solve(req);
+    if (!"SAT".equals(resp.status)) {
+      System.out.println("SAT test error: status=" + resp.status + ", message=" + (resp.error!=null?resp.error.message:null));
+    }
     assertEquals("SAT", resp.status, "expected SAT");
     assertNotNull(resp.instances);
     assertFalse(resp.instances.isEmpty());
@@ -28,13 +31,16 @@ public class AlloyRunnerTest {
   @Test
   @Timeout(10)
   void unsat_model_returns_unsat_without_core_on_sat4j() throws Exception {
-    String model = "sig A {}\n\nfact { no A }\n\nassert someA { some A }\ncheck someA for 3\n";
+    String model = new String(java.nio.file.Files.readAllBytes(java.nio.file.Paths.get("src/test/resources/models/unsat.als")));
     SolveRequest req = new SolveRequest();
     req.model = model;
     req.options = new SolveRequest.Options();
     req.options.solver = "SAT4J";
 
     SolveResponse resp = AlloyRunner.solve(req);
+    if (!"UNSAT".equals(resp.status)) {
+      System.out.println("UNSAT test error: status=" + resp.status + ", message=" + (resp.error!=null?resp.error.message:null));
+    }
     assertEquals("UNSAT", resp.status, "expected UNSAT");
     // On SAT4J, unsat core is not available; ensure no crash and allow null core
   }
@@ -42,7 +48,7 @@ public class AlloyRunnerTest {
   @Test
   @Timeout(10)
   void parse_error_is_reported() throws Exception {
-    String model = "sig A {\n  x: A\n"; // missing closing brace
+    String model = new String(java.nio.file.Files.readAllBytes(java.nio.file.Paths.get("src/test/resources/models/parse_error.als")));
     SolveRequest req = new SolveRequest();
     req.model = model;
     req.options = new SolveRequest.Options();
