@@ -47,6 +47,7 @@ public class App {
 
   private static int runSelfCheck() {
     try {
+      try { listAvailableSolvers(); } catch (Throwable ignored) {}
       // Make the check UNSAT by asserting no A with exactly 0 A (assertion holds; no counterexample)
       String spec = "sig A {}\n\nassert noA { no A }\ncheck noA for exactly 0 A\n";
       app.dto.SolveRequest req = new app.dto.SolveRequest();
@@ -82,5 +83,23 @@ public class App {
       System.out.println("self-check ERROR: " + t.getMessage());
       return 3;
     }
+  }
+
+  private static void listAvailableSolvers() {
+    try {
+      Class<?> a4 = Class.forName("edu.mit.csail.sdg.translator.A4Options");
+      for (Class<?> c : a4.getDeclaredClasses()) {
+        if (c.isEnum() && c.getSimpleName().toLowerCase().contains("solver")) {
+          Object[] constants = c.getEnumConstants();
+          System.out.println("Solvers:" );
+          for (Object constant : constants) {
+            String name = ((Enum<?>) constant).name();
+            String id = null;
+            try { id = String.valueOf(constant.getClass().getMethod("id").invoke(constant)); } catch (Exception ignore) {}
+            System.out.println(" - name=" + name + ", id=" + id);
+          }
+        }
+      }
+    } catch (Exception ignored) {}
   }
 }
