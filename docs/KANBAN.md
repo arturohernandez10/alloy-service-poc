@@ -2,22 +2,6 @@
 
 ## Registry
 
-- ID: K-20250809-006
-  - Title: CLI vs Embedded decision memo and runner abstraction
-  - Status: Backlog
-  - Assignee: Unassigned
-  - Priority: P2
-  - Size: S
-  - Deps: []
-  - Blockers: []
-  - Links: `docs/PROJECT.md`, `README.md`
-  - Artifacts: [`docs/PROJECT.md`, `README.md`]
-  - Acceptance:
-    - Decision memo added with trade-offs and selection rationale.
-    - Runner interface present; embedded path implemented; CLI path deferred or stubbed.
-  - Notes:
-    - 2025-08-09: Document choice and interface sketch.
-
 - ID: K-20250809-001
   - Title: Align DTOs to GPT function schema (spec/files/command/target/scope/options)
   - Status: Backlog
@@ -227,8 +211,6 @@
 
 ### Backlog
 
-- [K-20250809-006] CLI vs Embedded decision memo and runner abstraction — Unassigned
-  - Links: `docs/PROJECT.md`, `README.md`
 - [K-20250809-001] Align DTOs to GPT function schema (spec/files/command/target/scope/options) — Unassigned
   - Links: `docs/PROJECT.md`, `src/main/java/app/dto/SolveRequest.java`, `src/main/java/app/dto/SolveResponse.java`, `src/main/java/app/App.java`
 - [K-20250809-010] Container and CI – pin versions and self-check — Unassigned
@@ -268,3 +250,4 @@
 
 - 2025-08-09 [GPT-5]: ADD_CARD added 14 backlog cards; RENDER_BOARD from Registry.
 - 2025-08-09 [GPT-5]: EDIT_CARD Reordered Registry to reflect implementation sequence; RENDER_BOARD refreshed Backlog order.
+- 2025-08-09 [GPT-5]: EDIT_CARD Updated K-20250809-006 to embedded-only; RENDER_BOARD refreshed Backlog.

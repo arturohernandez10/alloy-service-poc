@@ -1,11 +1,11 @@
 
 # Project Statement — GPT Function to Execute Alloy 6 Specifications
 
-**Purpose.** Deliver a small, local‑first service module that exposes a single GPT‑compatible function to execute Alloy specifications and return structured results. The module should reuse Alloy 6 artifacts for execution and mirror the successful REST patterns from Alloy.Api for optional remote operation. Alloy 6 is the current toolchain (latest 6.2.0 as of Jan 9, 2025) and ships a CLI artifact suitable for headless use; the Analyzer can surface **unsat cores** when using a compatible solver (e.g., *“Minisat with Unsat Core”*). ([Alloy Tools][1], [Maven Repository][2], [Alloy Docs][3])
+**Purpose.** Deliver a small, local‑first service module that exposes a single GPT‑compatible function to execute Alloy specifications and return structured results. The module embeds Alloy 6 via its Java APIs for execution and mirrors the successful REST patterns from Alloy.Api for optional remote operation. Alloy 6 is the current toolchain (latest 6.2.0 as of Jan 9, 2025); the Analyzer can surface **unsat cores** when using a compatible solver (e.g., *“Minisat with Unsat Core”*). ([Alloy Tools][1], [Maven Repository][2], [Alloy Docs][3])
 
 **Leverage-first assumptions.**
 
-* **Engine:** org.alloytools.alloy (Alloy 6) as the default runner (CLI or embedded JVM). Requires a modern JVM (Java **17+**). ([GitHub][4])
+* **Engine:** org.alloytools.alloy (Alloy 6) embedded JVM runner only (no CLI in this repo). Requires a modern JVM (Java **17+**). ([GitHub][4])
 * **Interface pattern (remote mode):** Use **cmu‑sei/Alloy.Api** as the reference for REST shape (routes/DTOs, Swagger). ([GitHub][5])
 * **Temporal extensions:** Acknowledge Alloy 6’s temporal capabilities and the **Pardinus/Electrum** ecosystem, but keep them out of v1 scope (plan a spike later if needed). ([Alloy Tools][1], [Nuno Macedo][6])
 
@@ -13,7 +13,7 @@
 
 ## Outcomes (end of discovery)
 
-* **Decision log** (runner mode: CLI vs embedded JVM; local‑only vs adding remote worker).
+* **Decision log** (embedded JVM selected; CLI moved to separate project; local‑only vs optional remote worker noted).
 * **Pre‑PoC**: run one tiny Alloy command headlessly and return normalized JSON.
 * **v1 requirements & API schema** (function signature + result envelope).
 * **Portability plan** (local → container → optional remote worker).
@@ -24,7 +24,7 @@
 ## Scope
 
 **In:** Executing provided Alloy specs/commands; returning SAT/UNSAT/instances/unsat‑core (when solver supports it); basic options (scope, solver, timeout); a single function compatible with GPT function‑call grammar.
-**Out (for v1):** Multi‑tenant scheduling, persistent datasets, UI/visualization beyond simple exports, temporal analysis beyond what’s built‑in and straightforward, multi‑solver benchmarking.
+**Out (for v1):** Multi‑tenant scheduling, persistent datasets, UI/visualization beyond simple exports, temporal analysis beyond what’s built‑in and straightforward, multi‑solver benchmarking, CLI subprocess runner (moved to separate project).
 
 ---
 
@@ -32,15 +32,14 @@
 
 ### 1) Research & Scoping for v1 (reuse‑first)
 
-* **Confirm execution path(s)** using Alloy 6 artifacts:
+* **Confirm execution path** using Alloy 6 artifacts:
 
-  * **CLI subprocess** via org.alloytools.alloy.cli (fastest to integrate, good for isolation/kill/timeout). ([Maven Repository][2])
-  * **Embedded JVM** using the Alloy/Kodkod API (enables finer control and lower overhead). ([GitHub][4])
+  * **Embedded JVM** using the Alloy/Kodkod API (single path in this repo). ([GitHub][4])
 * **Compare against remote shape**: capture how **Alloy.Api** structures endpoints and DTOs; note what we keep/omit (no DB for v1). ([GitHub][5])
 * **Evaluation criteria** for runner choice
   Headless support, unsat core availability, instance enumeration, timeout/kill semantics, determinism (seed), cold/warm latency, portability (Mac/Linux/CI, container), error surface, and maintenance cadence. ([Alloy Docs][3])
 * **Smallest pre‑PoC (48–72h)**
-  Execute a hard‑coded tiny spec + single check/run via the **CLI** runner; capture {status, satisfiable, instance_count, stats, versions, logs}; enforce timeout/kill; include solver/tool versions in results. ([Maven Repository][2])
+  Execute a hard‑coded tiny spec + single check/run via the **embedded API**; capture {status, satisfiable, instance_count, stats, versions, logs}; enforce timeout/kill; include solver/tool versions in results. ([Maven Repository][2])
 
 ### 2) Requirements Definition
 
@@ -66,7 +65,7 @@
 
 #### Portability plan
 
-* **P0**: Local module + **CLI** runner. ([Maven Repository][2])
+* **P0**: Local module + **embedded API** runner.
 * **P1**: Containerized runner (pinned Alloy 6 + solvers).
 * **P2**: Optional **remote** worker (stateless REST) shaped after **Alloy.Api** but speaking the **same JSON contract** as the local function. ([GitHub][5])
 
@@ -81,8 +80,8 @@
 
 **Local execution (default):**
 
-* **Adapter** (your module) ⇄ **Runner** (CLI subprocess or embedded API).
-* The adapter normalizes stdout/stderr to JSON, enforces timeouts, and maps solver/tool versions.
+* **Adapter** (this module) ⇄ **Runner** (embedded API only).
+* The adapter normalizes results to JSON, enforces timeouts, and maps solver/tool versions.
 
 **Remote execution (optional):**
 
@@ -144,11 +143,10 @@ json
 
 ## Deliverables
 
-1. Comparative analysis (CLI vs embedded vs remote worker) and **decision memo**.
-2. **Pre‑PoC** runnable (CLI + minimal tests) and sample specs.
-3. JSON schema for parameters/result + TypeScript types.
-4. Container image definition with pinned Alloy 6 artifacts. ([Maven Repository][2])
-5. v1 backlog with estimates + risk register.
+1. **Pre‑PoC** runnable (embedded API + minimal tests) and sample specs.
+2. JSON schema for parameters/result + TypeScript types.
+3. Container image definition with pinned Alloy 6 artifacts.
+4. v1 backlog with estimates + risk register.
 
 ---
 
@@ -163,12 +161,12 @@ json
 
 ## Timeline (indicative, \~2 weeks)
 
-* **Days 1–3:** Runner choice experiments (CLI vs embedded); draft JSON contract; pick Pre‑PoC path.
+* **Days 1–3:** Finalize embedded runner integration; draft JSON contract; prepare Pre‑PoC.
 * **Days 4–6:** Pre‑PoC implementation; timeout/kill; normalized logs; return first‑K instances.
 * **Days 7–9:** Finalize function schema; containerize runner; add tests.
 * **Days 10–14:** v1 requirements, backlog, optional remote worker sketch (Alloy.Api‑style), and approval.
 
-**Exit Criteria:** Pre‑PoC demo succeeds; decisions documented; schema frozen; path to v1 (local and optional remote) is approved.
+**Exit Criteria:** Pre‑PoC demo succeeds; embedded‑only decision documented; schema frozen; path to v1 (local and optional remote) is approved.
 
 ---
 
@@ -176,8 +174,8 @@ json
 
 ### Milestone A: Foundation and direction
 
-* **Cards**: [K-20250809-006], [K-20250809-001], [K-20250809-010] (optionally [K-20250809-013])
-* **Exit**: Runner decision recorded; DTO schema aligned and backward compatible; CI builds container with pinned Alloy 6 and self-check; basic health/readiness available.
+* **Cards**: [K-20250809-001], [K-20250809-010] (optionally [K-20250809-013])
+* **Exit**: DTO schema aligned and backward compatible; CI builds container with pinned Alloy 6 and self-check; basic health/readiness available.
 
 ### Milestone B: Core execution semantics
 
@@ -204,7 +202,7 @@ json
 ### Notes & references (key facts)
 
 * Latest Alloy 6 release and feature set (including temporal logic), official site. ([Alloy Tools][1])
-* CLI artifact for headless execution (org.alloytools.alloy.cli) on Maven Central. ([Maven Repository][2])
+* Alloy distribution artifact includes native solvers for unsat‑core support when needed (e.g., MiniSatProverJNI). ([Maven Repository][2])
 * Java 17+ requirement from the project README. ([GitHub][4])
 * Unsat‑core support when using a compatible solver (e.g., *Minisat with Unsat Core*). ([Alloy Docs][3], [Alloy Tools][7])
 * Alloy.Api repository (REST pattern, Swagger). ([GitHub][5])
@@ -213,7 +211,7 @@ json
 ---
 
 [1]: https://alloytools.org/?utm_source=chatgpt.com "Alloy Analyzer"
-[2]: https://mvnrepository.com/artifact/org.alloytools/org.alloytools.alloy.cli?utm_source=chatgpt.com "org.alloytools » org.alloytools.alloy.cli - Maven Repository"
+[2]: https://central.sonatype.com/artifact/org.alloytools/org.alloytools.alloy.dist?utm_source=chatgpt.com "org.alloytools:org.alloytools.alloy.dist - Maven Central"
 [3]: https://alloy.readthedocs.io/en/latest/tooling/analyzer.html?utm_source=chatgpt.com "Analyzer - Alloy Documentation - Read the Docs"
 [4]: https://github.com/AlloyTools/org.alloytools.alloy?utm_source=chatgpt.com "AlloyTools/org.alloytools.alloy - GitHub"
 [5]: https://github.com/cmu-sei/Alloy.Api?utm_source=chatgpt.com "cmu-sei/Alloy.Api - GitHub"
