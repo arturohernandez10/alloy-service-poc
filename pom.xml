@@ -40,6 +40,18 @@
       <scope>runtime</scope>
     </dependency>
 
+    <!-- Ensure SAT4J solver is on the classpath for CI/test parity -->
+    <dependency>
+      <groupId>org.sat4j</groupId>
+      <artifactId>org.sat4j.core</artifactId>
+      <version>2.3.6</version>
+    </dependency>
+    <dependency>
+      <groupId>org.sat4j</groupId>
+      <artifactId>org.sat4j.pb</artifactId>
+      <version>2.3.6</version>
+    </dependency>
+
     <!-- SLF4J binding to avoid "No SLF4J providers were found" warnings -->
     <dependency>
       <groupId>org.slf4j</groupId>
