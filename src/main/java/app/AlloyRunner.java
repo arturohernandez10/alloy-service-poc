@@ -132,7 +132,14 @@ public class AlloyRunner {
     } else {
       out.status = "ok";
       out.satisfiable = false;
-      out.unsatCore = buildCore(req.spec, sol);
+      // Build unsat core only when solver supports it (prover path)
+      try {
+        if (opt != null && opt.solver != null && opt.solver.prover()) {
+          out.unsatCore = buildCore(req.spec, sol);
+        }
+      } catch (Throwable ignored) {
+        // leave core null on unsupported environments
+      }
     }
     out.instances = instances;
     out.debug.solverId = getSolverId(opt);
@@ -180,8 +187,8 @@ public class AlloyRunner {
       throw new IllegalStateException("Requested solver not found: " + normalized
           + "; available=" + SATFactory.getSolvers(), e);
     }
-    if (!solver.isPresent() || !solver.prover()) {
-      throw new IllegalStateException("Prover solver unavailable: " + solver.id());
+    if (!solver.isPresent()) {
+      throw new IllegalStateException("Requested solver unavailable: " + solver.id());
     }
     opt.solver = solver;
   }
