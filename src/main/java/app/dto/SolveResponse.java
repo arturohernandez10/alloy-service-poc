@@ -36,6 +36,7 @@ public class SolveResponse {
     public Long durationMs;
     public Long peakMemoryBytes;
     public String modelHash;
+    public Long seed;
   }
 
   public static class ErrorInfo {

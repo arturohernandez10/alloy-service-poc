@@ -42,7 +42,7 @@
 
 - ID: K-20250809-002
   - Title: Per-request timeout and deterministic seed
-  - Status: Review
+  - Status: Done
   - Assignee: Unassigned
   - Priority: P1
   - Size: M
@@ -60,7 +60,7 @@
 
 - ID: K-20250809-003
   - Title: Normalize instance serialization (atoms/relations tuples)
-  - Status: Backlog
+  - Status: Doing
   - Assignee: Unassigned
   - Priority: P1
   - Size: M
@@ -217,8 +217,6 @@
 
 ### Backlog
 
-- [K-20250809-003] Normalize instance serialization (atoms/relations tuples) — Unassigned
-  - Links: `src/main/java/app/AlloyRunner.java`, `docs/PROJECT.md`
 - [K-20250809-007] OpenAPI spec for /v1/solve (Alloy.Api-aligned) — Unassigned
   - Links: `docs/PROJECT.md`, `src/main/java/app/App.java`
 - [K-20250809-008] Testing – timeout, snapshot JSON, property-based options — Unassigned
@@ -240,19 +238,22 @@
 
 ### Doing
 
-
 ### Review
 
-- [K-20250809-002] Per-request timeout and deterministic seed — Unassigned
-  - Links: `src/main/java/app/AlloyRunner.java`, `docs/PROJECT.md`
 ### Done
 
 - [K-20250809-001] Align DTOs to GPT function schema (spec/files/command/target/scope/options) — GPT-5
   - Links: `docs/PROJECT.md`, `src/main/java/app/dto/SolveRequest.java`, `src/main/java/app/dto/SolveResponse.java`, `src/main/java/app/App.java`
- - [K-20250809-010] Container and CI – pin versions and self-check — GPT-5
-   - Links: `Dockerfile`, `pom.xml`, `README.md`
+- [K-20250809-010] Container and CI – pin versions and self-check — GPT-5
+  - Links: `Dockerfile`, `pom.xml`, `README.md`
+- [K-20250809-002] Per-request timeout and deterministic seed — Unassigned
+  - Links: `src/main/java/app/AlloyRunner.java`, `docs/PROJECT.md`
 
 ## Archive
+
+
+- [K-20250809-003] Normalize instance serialization (atoms/relations tuples) — Unassigned
+  - Links: `src/main/java/app/AlloyRunner.java`, `docs/PROJECT.md`
 
 ## Changelog
 
