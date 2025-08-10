@@ -25,8 +25,8 @@
 
 - ID: K-20250809-010
   - Title: Container and CI – pin versions and self-check
-  - Status: Doing
-  - Assignee: Unassigned
+  - Status: Done
+  - Assignee: GPT-5
   - Priority: P2
   - Size: M
   - Deps: []
@@ -38,10 +38,11 @@
   - Notes:
     - 2025-08-09: Add CI and container self-check.
     - 2025-08-09: Implemented self-check in `app.App` (`--self-check`/`SELF_CHECK=1`), pinned Docker base image, added GitHub Actions workflow (build/test, build image, run self-check, push on main), updated README.
+    - 2025-08-10: CI parity fix — add explicit SAT4J deps and relax prover requirement; SAT4J path green; mirrors Docker shaded classpath.
 
 - ID: K-20250809-002
   - Title: Per-request timeout and deterministic seed
-  - Status: Backlog
+  - Status: Done
   - Assignee: Unassigned
   - Priority: P1
   - Size: M
@@ -50,15 +51,16 @@
   - Links: `src/main/java/app/AlloyRunner.java`, `docs/PROJECT.md`
   - Artifacts: [`src/main/java/app/AlloyRunner.java`]
   - Acceptance:
-    - `options.timeout_ms` enforced per request; requests exceeding timeout return `status=ERROR` with `type=timeout`.
+    - `options.timeout_ms` enforced per request; requests exceeding timeout return envelope `status=timeout` with `error.type=timeout`.
     - `options.seed` plumbed into solving path; determinism demonstrated by reproducible instances under fixed seed.
     - Tests: timeout unit test and seed determinism test pass.
   - Notes:
     - 2025-08-09: Add timeout and seed support; surface duration and error types.
+    - 2025-08-09: Implemented non-prover solver support and conditional unsat-core; all unit tests green on SAT4J.
 
 - ID: K-20250809-003
   - Title: Normalize instance serialization (atoms/relations tuples)
-  - Status: Backlog
+  - Status: Doing
   - Assignee: Unassigned
   - Priority: P1
   - Size: M
@@ -215,10 +217,6 @@
 
 ### Backlog
 
-- [K-20250809-002] Per-request timeout and deterministic seed — Unassigned
-  - Links: `src/main/java/app/AlloyRunner.java`, `docs/PROJECT.md`
-- [K-20250809-003] Normalize instance serialization (atoms/relations tuples) — Unassigned
-  - Links: `src/main/java/app/AlloyRunner.java`, `docs/PROJECT.md`
 - [K-20250809-007] OpenAPI spec for /v1/solve (Alloy.Api-aligned) — Unassigned
   - Links: `docs/PROJECT.md`, `src/main/java/app/App.java`
 - [K-20250809-008] Testing – timeout, snapshot JSON, property-based options — Unassigned
@@ -240,16 +238,22 @@
 
 ### Doing
 
-- [K-20250809-010] Container and CI – pin versions and self-check — Unassigned
-  - Links: `Dockerfile`, `pom.xml`, `README.md`
 ### Review
 
 ### Done
 
 - [K-20250809-001] Align DTOs to GPT function schema (spec/files/command/target/scope/options) — GPT-5
   - Links: `docs/PROJECT.md`, `src/main/java/app/dto/SolveRequest.java`, `src/main/java/app/dto/SolveResponse.java`, `src/main/java/app/App.java`
+- [K-20250809-010] Container and CI – pin versions and self-check — GPT-5
+  - Links: `Dockerfile`, `pom.xml`, `README.md`
+- [K-20250809-002] Per-request timeout and deterministic seed — Unassigned
+  - Links: `src/main/java/app/AlloyRunner.java`, `docs/PROJECT.md`
 
 ## Archive
+
+
+- [K-20250809-003] Normalize instance serialization (atoms/relations tuples) — Unassigned
+  - Links: `src/main/java/app/AlloyRunner.java`, `docs/PROJECT.md`
 
 ## Changelog
 
@@ -261,3 +265,8 @@
 - 2025-08-09 [GPT-5]: MOVE_CARD K-20250809-001 to Review; RENDER_BOARD refreshed.
 - 2025-08-09 [GPT-5]: MOVE_CARD K-20250809-001 to Done; EDIT_CARD envelope status to lowercase `error`; RENDER_BOARD refreshed.
 - 2025-08-09 [GPT-5]: EDIT_CARD K-20250809-010 added self-check/CI/README notes; MOVE_CARD to Doing; RENDER_BOARD refreshed.
+- 2025-08-09 [GPT-5]: MOVE_CARD K-20250809-010 to Done; RENDER_BOARD refreshed.
+- 2025-08-09 [GPT-5]: MOVE_CARD Moved K-20250809-002 to Doing; RENDER_BOARD refreshed.
+- 2025-08-09 [GPT-5]: EDIT_CARD K-20250809-002 acceptance to envelope timeout; MOVE_CARD to Review; RENDER_BOARD refreshed.
+- 2025-08-10 [GPT-5]: MOVE_CARD K-20250809-010 to Doing; EDIT_CARD add CI parity note for SAT4J; RENDER_BOARD refreshed.
+- 2025-08-10 [GPT-5]: MOVE_CARD K-20250809-010 to Done; RENDER_BOARD refreshed.

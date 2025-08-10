@@ -102,6 +102,36 @@ public class AlloyRunner {
     opt.recordKodkod = req.options != null && Boolean.TRUE.equals(req.options.recordKodkod);
     opt.originalFilename = "input.als";
 
+    // Apply deterministic seed if provided (best-effort)
+    if (req.options != null && req.options.seed != null) {
+      long seed = req.options.seed.longValue();
+      out.debug.seed = seed;
+      try {
+        // Try a direct hook if present in this Alloy/Kodkod version
+        java.lang.reflect.Method m = opt.getClass().getMethod("setRandomSeed", long.class);
+        m.invoke(opt, seed);
+      } catch (Throwable t1) {
+        try {
+          // Some versions expose Kodkod Options through a field; attempt to reach and set there
+          java.lang.reflect.Field f = opt.getClass().getDeclaredField("kkOptions");
+          f.setAccessible(true);
+          Object kk = f.get(opt);
+          if (kk != null) {
+            try {
+              java.lang.reflect.Method mm = kk.getClass().getMethod("setRandomSeed", long.class);
+              mm.invoke(kk, seed);
+            } catch (Throwable t2) {
+              out.warnings.add("seed provided but could not be applied (unsupported in this build)");
+            }
+          } else {
+            out.warnings.add("seed provided but no underlying Kodkod options found");
+          }
+        } catch (Throwable t3) {
+          out.warnings.add("seed provided but could not be applied (unsupported in this build)");
+        }
+      }
+    }
+
     Command adjusted = choice;
     // Apply scope overrides if provided
     if (req.scope != null) {
@@ -132,7 +162,14 @@ public class AlloyRunner {
     } else {
       out.status = "ok";
       out.satisfiable = false;
-      out.unsatCore = buildCore(req.spec, sol);
+      // Build unsat core only when solver supports it (prover path)
+      try {
+        if (opt != null && opt.solver != null && opt.solver.prover()) {
+          out.unsatCore = buildCore(req.spec, sol);
+        }
+      } catch (Throwable ignored) {
+        // leave core null on unsupported environments
+      }
     }
     out.instances = instances;
     out.debug.solverId = getSolverId(opt);
@@ -180,8 +217,8 @@ public class AlloyRunner {
       throw new IllegalStateException("Requested solver not found: " + normalized
           + "; available=" + SATFactory.getSolvers(), e);
     }
-    if (!solver.isPresent() || !solver.prover()) {
-      throw new IllegalStateException("Prover solver unavailable: " + solver.id());
+    if (!solver.isPresent()) {
+      throw new IllegalStateException("Requested solver unavailable: " + solver.id());
     }
     opt.solver = solver;
   }

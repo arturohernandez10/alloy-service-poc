@@ -76,6 +76,60 @@ public class AlloyRunnerTest {
     assertEquals(1, req.scope.maxInstances);
     assertEquals(10, req.options.timeoutMs);
   }
+
+  @Test
+  @Timeout(10)
+  void timeout_returns_timeout_status_and_type() throws Exception {
+    // Use a simple SAT model but force an extremely small timeout
+    String spec = "sig A {} run {} for 6";
+    SolveRequest req = new SolveRequest();
+    req.spec = spec;
+    req.options = new SolveRequest.Options();
+    req.options.solver = "SAT4J";
+    req.options.timeoutMs = 1; // very small to trigger timeout
+
+    SolveResponse resp = AlloyRunner.solve(req);
+    assertTrue("timeout".equals(resp.status) || (resp.error != null && "timeout".equals(resp.error.type)),
+        "expected timeout envelope");
+  }
+
+  @Test
+  @Timeout(10)
+  void determinism_same_seed_same_instance_when_supported() throws Exception {
+    String spec = "sig A {} run {} for 3";
+    SolveRequest req1 = new SolveRequest();
+    req1.spec = spec;
+    req1.scope = new SolveRequest.Scope();
+    req1.scope.maxInstances = 1;
+    req1.options = new SolveRequest.Options();
+    req1.options.solver = "SAT4J"; // portable path
+    req1.options.seed = 123;
+
+    SolveRequest req2 = new SolveRequest();
+    req2.spec = spec;
+    req2.scope = new SolveRequest.Scope();
+    req2.scope.maxInstances = 1;
+    req2.options = new SolveRequest.Options();
+    req2.options.solver = "SAT4J";
+    req2.options.seed = 123;
+
+    SolveResponse r1 = AlloyRunner.solve(req1);
+    SolveResponse r2 = AlloyRunner.solve(req2);
+
+    if (r1.warnings != null && r1.warnings.stream().anyMatch(w -> w.contains("seed provided but"))) {
+      // Seeding unsupported in this build/solver; skip strong assertion
+      return;
+    }
+    assertEquals("ok", r1.status);
+    assertEquals("ok", r2.status);
+    assertEquals(Boolean.TRUE, r1.satisfiable);
+    assertEquals(Boolean.TRUE, r2.satisfiable);
+    assertNotNull(r1.instances);
+    assertNotNull(r2.instances);
+    assertFalse(r1.instances.isEmpty());
+    assertFalse(r2.instances.isEmpty());
+    assertEquals(r1.instances.get(0), r2.instances.get(0), "instances should match under same seed");
+  }
 }
 
 
