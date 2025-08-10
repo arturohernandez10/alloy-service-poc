@@ -91,53 +91,61 @@
 
 ## Proposed GPT Function (draft)
 
-json
-{
-  "name": "alloy.run",
-  "description": "Execute an Alloy 6 specification and return results.",
-  "parameters": {
-    "type": "object",
-    "properties": {
-      "spec": { "type": "string", "description": "Primary Alloy module text (.als)" },
-      "command": { "type": "string", "enum": ["check", "run"] },
-      "target": { "type": "string", "description": "Name of the command/predicate/assertion" },
-      "files": {
-        "type": "array",
-        "items": { "type": "object", "properties": { "path": {"type":"string"}, "content": {"type":"string"} }, "required": ["path","content"] }
-      },
-      "scope": {
-        "type": "object",
-        "properties": { "exact": { "type": "boolean" }, "bitwidth": { "type": "integer" }, "ints": { "type": "integer" }, "max_instances": { "type": "integer" } }
-      },
-      "options": {
-        "type": "object",
-        "properties": {
-          "timeout_ms": { "type": "integer" },
-          "solver": { "type": "string", "description": "e.g., minisat, sat4j; unsat-core requires a compatible solver" },
-          "symmetry_breaking": { "type": "integer" },
-          "seed": { "type": "integer" }
-        }
-      }
-    },
-    "required": ["spec", "command", "target"]
-  }
-}
+Function name: "alloy.run" — Execute an Alloy 6 specification and return results.
+
+Request properties (top‑level):
+
+* spec (required): Primary Alloy module text (.als). Should be valid Alloy 6 input.
+  * Nice‑to‑have: input size cap; SHA‑256 of the spec recorded in the response provenance.
+* command (required unless an alternative selector is provided): Action to execute.
+  * Typical values: "check", "run" (lowercase identifiers).
+* target (required unless an alternative selector is provided): Name of the predicate/assertion/command to execute.
+* command_index (optional alternative): Numeric selector for a parsed command when not using name.
+* files (optional): Additional in‑memory modules for `open` resolution.
+  * If unsupported, may be accepted and ignored; should be sandboxed to the provided set (no disk/network access).
+* scope (optional): Bounds for execution.
+  * Examples: exact, bitwidth, ints, max_instances; optionally per‑signature exact scopes by label.
+* options (optional): Solver/engine knobs; accepts extensions.
+  * Examples: timeout_ms, solver, symmetry_breaking, seed; additional keys (e.g., core tuning, unrolls, record_kodkod) may be accepted without guarantee of effect across all solvers.
+* request_id (optional): Caller‑supplied correlation id echoed in the response.
+* metadata (optional): Freeform client metadata; ignored by execution.
+
+Constraints:
+
+* Provide either (command and target) or command_index.
+* Be liberal in accepted request fields; ignore unknowns without failing.
 
 ### Result envelope (illustrative)
 
-json
-{
-  "status": "ok | timeout | error",
-  "satisfiable": true,
-  "instances": [
-    { "atoms": { "A": ["A0","A1"] }, "relations": { "R": [["A0","A1"]] }, "skolems": {}, "viz": { "dot": "digraph {...}" } }
-  ],
-  "unsat_core": { "highlights": ["line:col-..."], "note": "requires solver with unsat-core" },
-  "statistics": { "solve_ms": 317, "vars": 123, "clauses": 456, "solver": "..." },
-  "provenance": { "engine": "Alloy 6.2.0", "spec_sha256": "...", "mode": "local|remote" },
-  "logs": "normalized runner output",
-  "errors": []
-}
+Response properties (top‑level):
+
+* status (required): High‑level lifecycle outcome of the request (not the SAT result).
+  * Typical values: ok, timeout, error.
+* satisfiable (required when determinable): Solver determination.
+  * Values: true | false | null (null when not determined due to timeout/errors).
+* conclusion (optional, derived): sat | unsat | unknown.
+  * Derived from status + satisfiable; provided for client convenience.
+* instances (optional): Zero to K instances when SAT.
+  * Normalized content such as atoms (by signature) and relation tuples; stable ordering recommended for determinism.
+  * Nice‑to‑have: include skolems and/or visualization hints when available.
+* unsat_core (optional): Core information when the chosen solver supports it.
+  * Accepts richer or simpler shapes (e.g., ranges/highlights with optional snippet mapping). Omit when unsupported.
+* statistics (optional): Execution metrics.
+  * Examples: solve_ms and, when available, counts like vars/clauses; clarify whether times are wall vs solve time.
+* provenance (optional): Environment and reproducibility info.
+  * Examples: engine/solver ids and versions, spec hash, mode (local|remote), seed.
+* warnings (optional): Human‑readable non‑fatal notices (e.g., ignored files, degraded features).
+* error / errors (optional): Error information when status=error; flexible shape.
+  * Include a machine‑parsable type when possible (e.g., parse_error, type_error, timeout, oom, solver_error, bad_request).
+* logs (optional): Normalized textual logs (redact sensitive paths if any).
+* debug (optional): Vendor‑specific or advanced diagnostics; may change without notice.
+* command (optional): Echo of the executed command (type and selected target or index).
+* request_id (optional): Echo of the caller‑supplied id.
+
+Notes:
+
+* Graceful degradation: omit capability‑dependent fields (e.g., unsat_core) rather than failing; consider adding a warning.
+* Determinism (nice‑to‑have): when seed is supplied and supported, instances and tuple orders should be reproducible.
 
 ---
 
