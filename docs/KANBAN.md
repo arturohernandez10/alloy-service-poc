@@ -60,19 +60,20 @@
 
 - ID: K-20250809-003
   - Title: Normalize instance serialization (atoms/relations tuples)
-  - Status: Doing
+  - Status: Done
   - Assignee: Unassigned
   - Priority: P1
   - Size: M
   - Deps: []
   - Blockers: []
   - Links: `src/main/java/app/AlloyRunner.java`, `docs/PROJECT.md`
-  - Artifacts: [`src/main/java/app/AlloyRunner.java`]
+  - Artifacts: [`src/main/java/app/AlloyRunner.java`, `src/test/java/app/AlloyRunnerSnapshotTest.java`, `src/test/resources/snapshots/sat-instance.snapshot.json`, `README.md`]
   - Acceptance:
     - `instances` include atoms per sig and tuples per relation in a structured JSON form.
     - Snapshot tests added for SAT models; README examples updated.
   - Notes:
     - 2025-08-09: Replace stringified evals with normalized JSON.
+    - 2025-08-10: Added SAT instance snapshot test and README example; all tests green.
 
 - ID: K-20250809-007
   - Title: OpenAPI spec for /v1/solve (Alloy.Api-aligned)
@@ -238,9 +239,6 @@
 
 ### Doing
 
-- [K-20250809-003] Normalize instance serialization (atoms/relations tuples) — GPT-5
-  - Links: `src/main/java/app/AlloyRunner.java`, `docs/PROJECT.md`
-
 ### Review
 
 ### Done
@@ -251,6 +249,8 @@
   - Links: `Dockerfile`, `pom.xml`, `README.md`
 - [K-20250809-002] Per-request timeout and deterministic seed — GPT-5
   - Links: `src/main/java/app/AlloyRunner.java`, `docs/PROJECT.md`
+- [K-20250809-003] Normalize instance serialization (atoms/relations tuples) — GPT-5
+  - Links: `src/main/java/app/AlloyRunner.java`, `docs/PROJECT.md`, `src/test/java/app/AlloyRunnerSnapshotTest.java`, `README.md`
 
 ## Archive
 
@@ -269,3 +269,5 @@
 - 2025-08-09 [GPT-5]: EDIT_CARD K-20250809-002 acceptance to envelope timeout; MOVE_CARD to Review; RENDER_BOARD refreshed.
 - 2025-08-10 [GPT-5]: MOVE_CARD K-20250809-010 to Doing; EDIT_CARD add CI parity note for SAT4J; RENDER_BOARD refreshed.
 - 2025-08-10 [GPT-5]: MOVE_CARD K-20250809-010 to Done; RENDER_BOARD refreshed.
+- 2025-08-10 [GPT-5]: EDIT_CARD K-20250809-003 added SAT snapshot test and README example; RENDER_BOARD refreshed.
+- 2025-08-10 [GPT-5]: MOVE_CARD K-20250809-003 to Done; RENDER_BOARD refreshed.

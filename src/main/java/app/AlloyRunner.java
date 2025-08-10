@@ -243,16 +243,82 @@ public class AlloyRunner {
   }
 
   private static Map<String,Object> serializeInstance(Module world, A4Solution sol) throws Exception {
-    Map<String,Object> m = new LinkedHashMap<>();
-    for (Sig s : world.getAllReachableSigs()) {
-      m.put("sig:" + s.label, sol.eval(s).toString());
-      s.getFields().forEach(f -> {
+    Map<String, Object> instance = new LinkedHashMap<>();
+    Map<String, List<String>> atomsBySig = new LinkedHashMap<>();
+    Map<String, List<List<String>>> tuplesByRelation = new LinkedHashMap<>();
+
+    // Collect and sort reachable sigs deterministically by normalized label
+    List<Sig> sigs = new ArrayList<>(world.getAllReachableSigs());
+    sigs.sort(Comparator.comparing(s -> normalizeLabel(s.label)));
+
+    for (Sig sig : sigs) {
+      String sigLabel = normalizeLabel(sig.label);
+      if (isBuiltinSigLabel(sigLabel)) continue;
+
+      // Atoms for this sig (unary)
+      try {
+        A4TupleSet ts = sol.eval(sig);
+        List<String> atoms = new ArrayList<>();
+        for (A4Tuple t : ts) {
+          // Unary tuples: arity==1
+          atoms.add(normalizeLabel(t.atom(0)));
+        }
+        atoms.sort(Comparator.naturalOrder());
+        atomsBySig.put(sigLabel, atoms);
+      } catch (Throwable ignored) {}
+
+      // Fields (relations)
+      List<edu.mit.csail.sdg.ast.Sig.Field> fields = new ArrayList<edu.mit.csail.sdg.ast.Sig.Field>();
+      for (edu.mit.csail.sdg.ast.Sig.Field f0 : sig.getFields()) fields.add(f0);
+      fields.sort(Comparator.comparing(f -> normalizeLabel(f.label)));
+      for (edu.mit.csail.sdg.ast.Sig.Field f : fields) {
+        String relKey = sigLabel + "." + normalizeLabel(f.label);
         try {
-          m.put("field:" + s.label + "." + f.label, sol.eval(f).toString());
-        } catch (Exception ignored) {}
-      });
+          A4TupleSet fs = sol.eval(f);
+          List<List<String>> tuples = new ArrayList<>();
+          for (A4Tuple t : fs) {
+            int arity = t.arity();
+            List<String> tuple = new ArrayList<>(arity);
+            for (int i = 0; i < arity; i++) {
+              tuple.add(normalizeLabel(t.atom(i)));
+            }
+            tuples.add(tuple);
+          }
+          // Sort tuples lexicographically for determinism
+          tuples.sort((a, b) -> {
+            int n = Math.min(a.size(), b.size());
+            for (int i = 0; i < n; i++) {
+              int c = a.get(i).compareTo(b.get(i));
+              if (c != 0) return c;
+            }
+            return Integer.compare(a.size(), b.size());
+          });
+          tuplesByRelation.put(relKey, tuples);
+        } catch (Throwable ignored) {}
+      }
     }
-    return m;
+
+    instance.put("atoms", atomsBySig);
+    instance.put("relations", tuplesByRelation);
+    return instance;
+  }
+
+  private static boolean isBuiltinSigLabel(String normalizedLabel) {
+    // Conservative filter by label; Alloy builtins typically include these labels
+    return normalizedLabel == null || normalizedLabel.isEmpty()
+        || normalizedLabel.equals("univ")
+        || normalizedLabel.equals("Int")
+        || normalizedLabel.equals("seq/Int")
+        || normalizedLabel.equals("String")
+        || normalizedLabel.equals("iden")
+        || normalizedLabel.equals("none");
+  }
+
+  private static String normalizeLabel(String label) {
+    if (label == null) return null;
+    String s = label;
+    if (s.startsWith("this/")) s = s.substring(5);
+    return s;
   }
 
   private static SolveResponse.UnsatCore buildCore(String source, A4Solution sol) {

@@ -152,7 +152,28 @@ java -jar target/alloy-service-poc-0.1.0.jar
 
 ### Try it (examples)
 
-TODO: Example requests/responses will be added after the contract is finalized. For working samples today, see the unit tests under `src/test/java/app/**` and models in `src/test/resources/models/**`.
+The service normalizes instances as structured JSON with per-signature atoms and per-relation tuples. Example (first instance):
+
+```json
+{
+  "instances": [
+    {
+      "atoms": {
+        "A": ["A$0", "A$1"]
+      },
+      "relations": {
+        "A.r": [["A$0", "A$1"]]
+      }
+    }
+  ]
+}
+```
+
+Notes:
+- Atom identifiers are stable within a response but abstract (not raw analyzer internals).
+- Built-in signatures like `univ`, `Int`, `seq/Int`, `String`, `iden`, `none` are omitted.
+
+For working end-to-end samples today, see the unit tests under `src/test/java/app/**` and models in `src/test/resources/models/**`.
 
 ---
 
@@ -258,12 +279,8 @@ Alloy 6 ships a CLI (`java -jar alloy.jar help`) and embeds an LSP server. Those
 [5]: https://central.sonatype.com/artifact/org.alloytools/org.alloytools.alloy.application?utm_source=chatgpt.com "org.alloytools:org.alloytools.alloy.application - Maven Central"
 [6]: https://alloytools.org/documentation/code/ExampleUsingTheCompiler.java?utm_source=chatgpt.com "download - Alloy Analyzer"
 [7]: https://alloytools.discourse.group/t/how-can-i-run-alloy-in-command-line/275?utm_source=chatgpt.com "How can I run Alloy in command line? - Questions"
-[8]: https://alloytools.org/documentation/alloy-api/edu/mit/csail/sdg/alloy4compiler/translator/A4Solution.html "
-A4Solution
-"
-[9]: https://alloytools.org/documentation/alloy-api/edu/mit/csail/sdg/alloy4compiler/translator/A4Options.SatSolver.html "
-A4Options.SatSolver
-"
+[8]: https://alloytools.org/documentation/alloy-api/edu/mit/csail/sdg/alloy4compiler/translator/A4Solution.html 
+[9]: https://alloytools.org/documentation/alloy-api/edu/mit/csail/sdg/alloy4compiler/translator/A4Options.SatSolver.html 
 [10]: https://alloytools.org/documentation/alloy-api/index-files/index-23.html?utm_source=chatgpt.com "X-Index"
 [11]: https://mvnrepository.com/artifact/org.alloytools "Maven Repository: org.alloytools"
 [12]: https://alloytools.org/documentation/alloy-api/edu/mit/csail/sdg/alloy4compiler/translator/A4Options.html?utm_source=chatgpt.com "A4Options"

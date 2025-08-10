@@ -27,6 +27,19 @@ public class AlloyRunnerTest {
     assertEquals(Boolean.TRUE, resp.satisfiable, "expected satisfiable=true");
     assertNotNull(resp.instances);
     assertFalse(resp.instances.isEmpty());
+    // Validate normalized shape
+    java.util.Map<String,Object> inst = resp.instances.get(0);
+    assertTrue(inst.containsKey("atoms"));
+    assertTrue(inst.containsKey("relations"));
+    @SuppressWarnings("unchecked")
+    java.util.Map<String,java.util.List<String>> atoms = (java.util.Map<String,java.util.List<String>>) inst.get("atoms");
+    assertNotNull(atoms);
+    assertTrue(atoms.containsKey("A"));
+    assertEquals(2, atoms.get("A").size());
+    @SuppressWarnings("unchecked")
+    java.util.Map<String,java.util.List<java.util.List<String>>> rels = (java.util.Map<String,java.util.List<java.util.List<String>>>) inst.get("relations");
+    assertNotNull(rels);
+    assertTrue(rels.isEmpty());
   }
 
   @Test
