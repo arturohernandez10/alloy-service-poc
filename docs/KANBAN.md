@@ -238,6 +238,9 @@
 
 ### Doing
 
+- [K-20250809-003] Normalize instance serialization (atoms/relations tuples) — GPT-5
+  - Links: `src/main/java/app/AlloyRunner.java`, `docs/PROJECT.md`
+
 ### Review
 
 ### Done
@@ -246,14 +249,10 @@
   - Links: `docs/PROJECT.md`, `src/main/java/app/dto/SolveRequest.java`, `src/main/java/app/dto/SolveResponse.java`, `src/main/java/app/App.java`
 - [K-20250809-010] Container and CI – pin versions and self-check — GPT-5
   - Links: `Dockerfile`, `pom.xml`, `README.md`
-- [K-20250809-002] Per-request timeout and deterministic seed — Unassigned
+- [K-20250809-002] Per-request timeout and deterministic seed — GPT-5
   - Links: `src/main/java/app/AlloyRunner.java`, `docs/PROJECT.md`
 
 ## Archive
-
-
-- [K-20250809-003] Normalize instance serialization (atoms/relations tuples) — Unassigned
-  - Links: `src/main/java/app/AlloyRunner.java`, `docs/PROJECT.md`
 
 ## Changelog
 
