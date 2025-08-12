@@ -218,8 +218,6 @@
 
 ### Backlog
 
-- [K-20250809-007] OpenAPI spec for /v1/solve (Alloy.Api-aligned) — Unassigned
-  - Links: `docs/PROJECT.md`, `src/main/java/app/App.java`
 - [K-20250809-008] Testing – timeout, snapshot JSON, property-based options — Unassigned
   - Links: `src/test/java/app/**`, `src/test/resources/models/**`
 - [K-20250809-004] Multi-module support with safe in-memory file provider — Unassigned
@@ -238,6 +236,9 @@
   - Links: `Dockerfile`, `README.md`
 
 ### Doing
+
+- [K-20250809-007] OpenAPI spec for /v1/solve (Alloy.Api-aligned) — Unassigned
+  - Links: `docs/PROJECT.md`, `src/main/java/app/App.java`
 
 ### Review
 
