@@ -23,8 +23,8 @@
 
 ## Scope
 
-**In:** Executing provided Alloy specs/commands; returning SAT/UNSAT/instances/unsat‑core (when solver supports it); basic options (scope, solver, timeout); a single function compatible with GPT function‑call grammar.
-**Out (for v1):** Multi‑tenant scheduling, persistent datasets, UI/visualization beyond simple exports, temporal analysis beyond what’s built‑in and straightforward, multi‑solver benchmarking, CLI subprocess runner (moved to separate project).
+**In:** Executing provided Alloy specs/commands; returning SAT/UNSAT/instances/unsat‑core (when solver supports it); basic options (scope, solver, timeout); a single function compatible with open API definitions.
+**Out (for v1):** Multi‑tenant scheduling, persistent datasets, UI/visualization beyond simple exports, temporal analysis beyond what’s built‑in and straightforward, multi‑solver benchmarking, CLI subprocess runner (moved to separate project). The OpenAI orchestration (prompting, tool_choice, and Lark grammar attachment) is also out of scope for this repo and lives in a separate module.
 
 ---
 
@@ -53,15 +53,15 @@
   * Find 0..K instances; interruptible via timeout; deterministic mode via seed when supported.
 * **Outputs:**
 
-  * SAT | UNSAT | UNKNOWN, **first K instances** (atoms/relations), **unsat core** when solver supports it (e.g., Minisat‑with‑Unsat‑Core), timings, solver/tool versions, normalized logs. ([Alloy Docs][3])
+  * SAT | UNSAT | UNKNOWN, **first K instances** (atoms/relations), **unsat core** when solver supports it (e.g., Minisat‑with‑Unsat‑Core), timings, solver/tool versions, normalized logs. Use HTTP 200 for `ok` and `timeout`; reserve 4xx/5xx for transport/server faults. ([Alloy Docs][3])
 
 #### Non‑functional (v1)
 
 * **Local‑first**: single command; no network required.
 * **Portability**: JVM **17+** or container image with pinned Alloy 6 CLI; CI on Linux and macOS. ([GitHub][4], [Maven Repository][2])
-* **Performance targets**: small models finish in ≤5s (cold), ≤2s (warm); configurable timeout_ms.
+* **Performance targets**: small models finish in ≤5s (cold), ≤2s (warm); configurable timeout_ms. External orchestrators that attach grammars may see a one‑time warm‑up on first use.
 * **Safety**: no network/filesystem access from specs; process/container limits (CPU/mem), temp workdir, input size caps.
-* **Observability**: structured logs, spec hash, tool/solver versions, mode (local|remote).
+* **Observability**: structured logs, spec hash (e.g., `spec_sha256`), tool/solver versions, mode (local|remote).
 
 #### Portability plan
 
@@ -138,6 +138,7 @@ Response properties (top‑level):
 * error / errors (optional): Error information when status=error; flexible shape.
   * Include a machine‑parsable type when possible (e.g., parse_error, type_error, timeout, oom, solver_error, bad_request).
 * logs (optional): Normalized textual logs (redact sensitive paths if any).
+* OpenAPI (note): Use OpenAPI 3.1 with JSON Schema 2020‑12 (nullables via `type: [T, "null"]`).
 * debug (optional): Vendor‑specific or advanced diagnostics; may change without notice.
 * command (optional): Echo of the executed command (type and selected target or index).
 * request_id (optional): Echo of the caller‑supplied id.

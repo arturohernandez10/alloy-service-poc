@@ -77,7 +77,7 @@
 
 - ID: K-20250809-007
   - Title: OpenAPI spec for /v1/solve (Alloy.Api-aligned)
-  - Status: Backlog
+  - Status: Done
   - Assignee: Unassigned
   - Priority: P1
   - Size: M
@@ -86,8 +86,11 @@
   - Links: `docs/PROJECT.md`, `src/main/java/app/App.java`
   - Artifacts: [`docs/openapi.yaml` (new), `src/main/java/app/App.java`]
   - Acceptance:
-    - OpenAPI published; route and DTOs match schema; examples included.
-    - Validated by linting tool; integrated into README.
+    - OpenAPI 3.1 published; route and DTOs match schema; examples included.
+    - Nullables use JSON Schema 2020-12 (`type: [T, "null"]`), not `nullable:`.
+    - HTTP semantics: 200 for `ok` and `timeout`; 4xx/5xx only for transport/server faults.
+    - Verified by linting tool; integrated into README. Unit tests cover SAT/UNSAT/timeout/bad_request examples.
+    - OpenAI orchestration (grammar/tool wiring) is out of repo scope.
   - Notes:
     - 2025-08-09: Generate spec and wire to current route.
 
@@ -237,9 +240,6 @@
 
 ### Doing
 
-- [K-20250809-007] OpenAPI spec for /v1/solve (Alloy.Api-aligned) — Unassigned
-  - Links: `docs/PROJECT.md`, `src/main/java/app/App.java`
-
 ### Review
 
 ### Done
@@ -252,6 +252,8 @@
   - Links: `src/main/java/app/AlloyRunner.java`, `docs/PROJECT.md`
 - [K-20250809-003] Normalize instance serialization (atoms/relations tuples) — GPT-5
   - Links: `src/main/java/app/AlloyRunner.java`, `docs/PROJECT.md`, `src/test/java/app/AlloyRunnerSnapshotTest.java`, `README.md`
+- [K-20250809-007] OpenAPI spec for /v1/solve (Alloy.Api-aligned) — GPT-5
+  - Links: `docs/PROJECT.md`, `src/main/java/app/App.java`
 
 ## Archive
 
@@ -272,3 +274,6 @@
 - 2025-08-10 [GPT-5]: MOVE_CARD K-20250809-010 to Done; RENDER_BOARD refreshed.
 - 2025-08-10 [GPT-5]: EDIT_CARD K-20250809-003 added SAT snapshot test and README example; RENDER_BOARD refreshed.
 - 2025-08-10 [GPT-5]: MOVE_CARD K-20250809-003 to Done; RENDER_BOARD refreshed.
+- 2025-08-14 [GPT-5]: EDIT_CARD K-20250809-007 acceptance strengthened (OAS 3.1, JSON Schema nullables via oneOf, HTTP 200 semantics for ok/timeout, orchestration out-of-repo); RENDER_BOARD refreshed.
+- 2025-08-14 [GPT-5]: MOVE_CARD K-20250809-007 to Review; RENDER_BOARD refreshed.
+- 2025-08-14 [GPT-5]: MOVE_CARD K-20250809-007 to Done; RENDER_BOARD refreshed.

@@ -1,0 +1,307 @@
+# yaml-language-server: $schema=https://spec.openapis.org/oas/3.1/schema/2022-10-07
+openapi: 3.1.0
+info:
+  title: Alloy Service POC API
+  version: 0.1.0
+  description: |
+    OpenAPI 3.1 definition for the Alloy Service POC `/v1/solve` endpoint.
+    This spec mirrors the DTOs in `src/main/java/app/dto/**`.
+servers:
+  - url: http://localhost:8080
+paths:
+  /v1/solve:
+    post:
+      summary: Execute an Alloy specification (run/check) and return results
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SolveRequest'
+            examples:
+              sat-run:
+                $ref: '#/components/examples/SolveRequestSat'
+              unsat-check:
+                $ref: '#/components/examples/SolveRequestUnsat'
+      responses:
+        '200':
+          description: Execution completed (ok or timeout)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SolveResponse'
+              examples:
+                ok-sat:
+                  $ref: '#/components/examples/SolveResponseSatOk'
+                ok-unsat:
+                  $ref: '#/components/examples/SolveResponseUnsatOk'
+        '400':
+          description: Bad request (malformed JSON or mapping error)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SolveResponse'
+              examples:
+                bad-request:
+                  $ref: '#/components/examples/SolveResponseBadRequest'
+components:
+  schemas:
+    SolveRequest:
+      type: object
+      required: [spec]
+      properties:
+        spec:
+          type: string
+          description: Primary Alloy module text (.als)
+        command:
+          type: string
+          description: Action to execute
+          enum: [check, run]
+        target:
+          type: string
+          description: Predicate/assertion/command label to execute
+        commandIndex:
+          type: integer
+          minimum: 0
+        files:
+          type: array
+          items:
+            $ref: '#/components/schemas/FileItem'
+        scope:
+          $ref: '#/components/schemas/Scope'
+        options:
+          $ref: '#/components/schemas/Options'
+        requestId:
+          type: string
+    FileItem:
+      type: object
+      required: [path, content]
+      properties:
+        path:
+          type: string
+        content:
+          type: string
+    Scope:
+      type: object
+      properties:
+        exact:
+          type: boolean
+        bitwidth:
+          type: integer
+        ints:
+          type: integer
+        max_instances:
+          type: integer
+          description: Maximum instances to enumerate
+        exactScopes:
+          type: object
+          additionalProperties:
+            type: integer
+            minimum: 0
+    Options:
+      type: object
+      properties:
+        solver:
+          type: string
+          description: e.g., SAT4J, MiniSatProverJNI
+        coreGranularity:
+          type: integer
+          minimum: 0
+          maximum: 3
+        coreMinimization:
+          type: integer
+          minimum: 0
+          maximum: 2
+        unrolls:
+          type: integer
+        symmetry_breaking:
+          type: integer
+        recordKodkod:
+          type: boolean
+        timeout_ms:
+          type: integer
+          minimum: 0
+        seed:
+          type: integer
+    SolveResponse:
+      type: object
+      properties:
+        requestId:
+          type: string
+        status:
+          type: string
+          enum: [ok, error, timeout]
+        satisfiable:
+          oneOf:
+            - type: boolean
+            - type: 'null'
+        command:
+          type: string
+          description: Executed command as text (stringified Alloy command)
+        instances:
+          type: array
+          items:
+            $ref: '#/components/schemas/Instance'
+        unsat_core:
+          oneOf:
+            - $ref: '#/components/schemas/UnsatCore'
+            - type: 'null'
+        warnings:
+          type: array
+          items:
+            type: string
+        debug:
+          oneOf:
+            - $ref: '#/components/schemas/Debug'
+            - type: 'null'
+        error:
+          oneOf:
+            - $ref: '#/components/schemas/ErrorInfo'
+            - type: 'null'
+    Instance:
+      type: object
+      properties:
+        atoms:
+          type: object
+          additionalProperties:
+            type: array
+            items:
+              type: string
+        relations:
+          type: object
+          additionalProperties:
+            type: array
+            items:
+              type: array
+              items:
+                type: string
+              minItems: 1
+    UnsatCore:
+      type: object
+      properties:
+        must:
+          type: array
+          items:
+            $ref: '#/components/schemas/Range'
+        maybe:
+          type: array
+          items:
+            $ref: '#/components/schemas/Range'
+        low:
+          type: array
+          items:
+            $ref: '#/components/schemas/Range'
+        snippetByRangeId:
+          type: object
+          additionalProperties:
+            type: string
+    Range:
+      type: object
+      required: [id, file, startLine, startCol, endLine, endCol]
+      properties:
+        id:
+          type: string
+        file:
+          type: string
+        startLine:
+          type: integer
+          minimum: 1
+        startCol:
+          type: integer
+          minimum: 1
+        endLine:
+          type: integer
+          minimum: 1
+        endCol:
+          type: integer
+          minimum: 1
+    Debug:
+      type: object
+      properties:
+        solverId:
+          type: string
+        bitwidth:
+          type: integer
+        maxSeq:
+          type: integer
+        kodkod:
+          type: string
+        originalFile:
+          type: string
+        durationMs:
+          type: integer
+          minimum: 0
+        peakMemoryBytes:
+          type: integer
+          minimum: 0
+        modelHash:
+          type: string
+        seed:
+          type: integer
+    ErrorInfo:
+      type: object
+      properties:
+        type:
+          type: string
+          enum: [parse_error, type_error, timeout, oom, solver_error, bad_request, busy]
+        message:
+          type: string
+  examples:
+    SolveRequestSat:
+      summary: Minimal SAT run
+      value:
+        spec: |
+          sig A {}
+          pred show {}
+          run show for 3
+        command: run
+        target: show
+        scope:
+          max_instances: 1
+        options:
+          solver: SAT4J
+          timeout_ms: 2000
+    SolveRequestUnsat:
+      summary: UNSAT check using prover for cores
+      value:
+        spec: |
+          sig A {}
+          assert noA { no A }
+          check noA for exactly 0 A
+        command: check
+        target: noA
+        options:
+          solver: SAT4J
+          timeout_ms: 2000
+    SolveResponseSatOk:
+      summary: SAT result with one instance
+      value:
+        status: ok
+        satisfiable: true
+        instances:
+          - atoms:
+              A: ["A$0", "A$1"]
+            relations: {}
+        debug:
+          solverId: sat4j
+          durationMs: 37
+    SolveResponseUnsatOk:
+      summary: UNSAT result with (optional) empty core
+      value:
+        status: ok
+        satisfiable: false
+        unsat_core:
+          must: []
+          maybe: []
+          low: []
+        debug:
+          solverId: minisat.prover
+          durationMs: 42
+    SolveResponseBadRequest:
+      summary: Bad request (HTTP 400)
+      value:
+        status: error
+        error:
+          type: bad_request
+          message: spec is required
+

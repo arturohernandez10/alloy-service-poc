@@ -1,6 +1,6 @@
 # Alloy Service POC
 
-Note: This README is work-in-progress. Sections marked TODO are not finalized and may change as implementation evolves. For the current, authoritative contract and behavior, refer to `docs/PROJECT.md`, `docs/AI_FUNCTION_CALL_CONTRACT_NOTES.md`, and the DTO/runner sources under `src/main/java/app/**`.
+Note: This README is work-in-progress. Sections marked TODO are not finalized and may change as implementation evolves. For the current, authoritative contract and behavior, refer to `docs/PROJECT.md`, `docs/GPT5-grammar-feature.md`, and the DTO/runner sources under `src/main/java/app/**`.
 
 * A minimal project (Maven + Java 17, Javalin HTTP).
 * Code to parse & run Alloy, enumerate solutions, and extract **unsat cores**.
@@ -131,6 +131,34 @@ TODO: This section will be updated to reflect the current DTOs and envelope sema
 ## 3) JSON shapes — GPT tool contract
 
 TODO: The JSON contract is evolving. Do not rely on example schemas here. Refer to `docs/PROJECT.md` and `docs/AI_FUNCTION_CALL_CONTRACT_NOTES.md` for the latest request/response requirements, and inspect the DTOs in `src/main/java/app/dto/**` for the current shape.
+
+---
+
+## 3.5) API (OpenAPI 3.1)
+
+See the OpenAPI spec at `docs/openapi.yaml` (validated by IDE schema header). Examples in the spec are covered by unit tests under `src/test/java/app/OpenApiExamplesTest.java`.
+
+Quick curl (SAT run example):
+
+```bash
+curl -s http://localhost:8080/v1/solve \
+  -H 'Content-Type: application/json' \
+  -d @- << 'JSON'
+{
+  "spec": "sig A {}\npred show {}\nrun show for 3\n",
+  "command": "run",
+  "target": "show",
+  "scope": { "max_instances": 1 },
+  "options": { "solver": "SAT4J", "timeout_ms": 2000 }
+}
+JSON
+```
+
+Lint the spec locally (optional):
+
+```bash
+npx --yes @stoplight/spectral-cli lint docs/openapi.yaml
+```
 
 ---
 
