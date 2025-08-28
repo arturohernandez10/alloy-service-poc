@@ -7,6 +7,10 @@ Note: This README is work-in-progress. Sections marked TODO are not finalized an
 * Dockerfile and quick deploy notes (Azure Container Apps/App Service).
 * TODO: JSON request/response examples will be added once the contract is finalized.
 
+User-facing docs:
+
+- User Reference (HTTP usage): `docs/USER_REFERENCE.md`
+
 > **Why this will work**
 > The service relies on Alloy’s public Java API (`CompUtil`, `TranslateAlloyToKodkod`, `A4Solution`) which exposes both **solution enumeration** and **unsat-core** accessors (`highLevelCore()`, `lowLevelCore()`). ([alloytools.org][1])
 > We load Alloy from Maven Central (Alloy 6.2.x artifacts), and include the **`org.alloytools.alloy.dist`** runtime so JNI-based solvers (needed for unsat cores) are available inside Linux containers. ([Maven Repository][2])

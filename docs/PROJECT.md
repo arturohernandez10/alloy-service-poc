@@ -181,27 +181,27 @@ Notes:
 
 ## Milestones
 
-### Milestone A: Foundation and direction
+### Milestone A: Foundation and direction — Status: Done
 
 * **Cards**: [K-20250809-001], [K-20250809-010] (optionally [K-20250809-013])
 * **Exit**: DTO schema aligned and backward compatible; CI builds container with pinned Alloy 6 and self-check; basic health/readiness available.
 
-### Milestone B: Core execution semantics
+### Milestone B: Core execution semantics — Status: Done
 
 * **Cards**: [K-20250809-002], [K-20250809-003]
 * **Exit**: Per-request timeout enforced; deterministic seed plumbed; instances serialized in normalized JSON suitable for snapshots.
 
-### Milestone C: Contract externalization
+### Milestone C: Contract externalization — Status: In progress
 
 * **Cards**: [K-20250809-007], [K-20250809-008]
 * **Exit**: OpenAPI for /v1/solve matches DTOs with examples; tests green (timeout, SAT/UNSAT snapshots, property-based scaffold).
 
-### Milestone D: Safety and capability completeness
+### Milestone D: Safety and capability completeness — Status: Not started
 
 * **Cards**: [K-20250809-004], [K-20250809-011], [K-20250809-009], [K-20250809-005]
 * **Exit**: Safe multi-module in-memory resolver; runtime caps and sandboxing enforced; solver capability detection and graceful degradation; provenance/statistics included; all tests pass.
 
-### Milestone E: Documentation and release
+### Milestone E: Documentation and release — Status: Not started
 
 * **Cards**: [K-20250809-012], [K-20250809-014]
 * **Exit**: Docs synced with current API and examples; release workflow produces tagged images and changelog.

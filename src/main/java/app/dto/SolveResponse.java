@@ -42,5 +42,6 @@ public class SolveResponse {
   public static class ErrorInfo {
     public String type; // parse_error | type_error | timeout | oom | solver_error | bad_request
     public String message;
+    public Range range; // optional source range when available
   }
 }

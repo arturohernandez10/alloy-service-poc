@@ -4,6 +4,11 @@ import app.dto.SolveRequest;
 import app.dto.SolveResponse;
 
 import edu.mit.csail.sdg.alloy4.A4Reporter;
+import edu.mit.csail.sdg.alloy4.Err;
+import edu.mit.csail.sdg.alloy4.ErrorAPI;
+import edu.mit.csail.sdg.alloy4.ErrorFatal;
+import edu.mit.csail.sdg.alloy4.ErrorSyntax;
+import edu.mit.csail.sdg.alloy4.ErrorType;
 import edu.mit.csail.sdg.alloy4.Pair;
 import edu.mit.csail.sdg.alloy4.Pos;
 import edu.mit.csail.sdg.ast.Command;
@@ -64,6 +69,9 @@ public class AlloyRunner {
       return errorWithDebug(out, started, "timeout", "solve exceeded " + timeoutMs + " ms");
     } catch (ExecutionException ee) {
       Throwable cause = ee.getCause();
+      if (cause instanceof Err) {
+        return errorFromErr(out, started, (Err) cause, req.spec);
+      }
       String msg = cause != null ? cause.getMessage() : ee.getMessage();
       return errorWithDebug(out, started, "solver_error", msg);
     } catch (RejectedExecutionException ree) {
@@ -72,6 +80,7 @@ public class AlloyRunner {
   }
 
   private static SolveResponse executeSolve(SolveRequest req, long started, SolveResponse out) throws Exception {
+    try {
     // compute requested instance cap from scope (default 1)
     int requestedMaxInstances = 1;
     if (req.scope != null && req.scope.maxInstances != null && req.scope.maxInstances > 0) {
@@ -181,6 +190,9 @@ public class AlloyRunner {
 
     out.debug.durationMs = System.currentTimeMillis() - started;
     return out;
+    } catch (Err e) {
+      return errorFromErr(out, started, e, req.spec);
+    }
   }
 
   private static Command chooseCommand(List<Command> cmds, String label, Integer idx, String kind) {
@@ -205,7 +217,7 @@ public class AlloyRunner {
   private static void setSolver(A4Options opt, SolveRequest req) {
     String requested = (req != null && req.options != null && req.options.solver != null)
         ? req.options.solver
-        : "minisat.prover";
+        : "sat4j";
 
     // Normalize common legacy names to Alloy 6.2 ids
     String normalized = normalizeSolverId(requested);
@@ -224,7 +236,7 @@ public class AlloyRunner {
   }
 
   private static String normalizeSolverId(String id) {
-    if (id == null) return "minisat.prover";
+    if (id == null) return "sat4j";
     String s = id.trim();
     if (s.equalsIgnoreCase("MiniSatProverJNI") || s.equalsIgnoreCase("MiniSatProver")
         || s.equalsIgnoreCase("MINISAT_PROVER") || s.equalsIgnoreCase("MINISAT.PROVER")) {
@@ -343,6 +355,29 @@ public class AlloyRunner {
     String snippet = slice(source, r.startLine, r.startCol, r.endLine, r.endCol);
     if (snippet != null && !snippet.isBlank()) snippets.put(r.id, snippet);
     return r;
+  }
+
+  private static SolveResponse errorFromErr(SolveResponse base, long started, Err e, String source) {
+    SolveResponse r = base != null ? base : new SolveResponse();
+    r.status = "error";
+    r.error = new SolveResponse.ErrorInfo();
+    r.error.type = mapErrType(e);
+    r.error.message = e.getMessage();
+    if (e.pos != null && e.pos != Pos.UNKNOWN) {
+      Map<String,String> scratch = new LinkedHashMap<>();
+      r.error.range = toRange(e.pos, source, scratch);
+    }
+    if (r.debug == null) r.debug = new SolveResponse.Debug();
+    r.debug.durationMs = System.currentTimeMillis() - started;
+    return r;
+  }
+
+  private static String mapErrType(Err e) {
+    if (e instanceof ErrorSyntax) return "parse_error";
+    if (e instanceof ErrorType) return "type_error";
+    if (e instanceof ErrorAPI) return "bad_request";
+    if (e instanceof ErrorFatal) return "solver_error";
+    return "solver_error";
   }
 
   private static String slice(String text, int y1, int x1, int y2, int x2) {

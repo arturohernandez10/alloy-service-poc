@@ -72,7 +72,28 @@ public class AlloyRunnerTest {
     SolveResponse resp = AlloyRunner.solve(req);
     assertEquals("error", resp.status);
     assertNotNull(resp.error);
-    assertEquals("solver_error", resp.error.type); // surfaced from parser/typechecker path
+    assertEquals("parse_error", resp.error.type);
+    assertNotNull(resp.error.range, "expected range on parse_error");
+    assertTrue(resp.error.range.startLine >= 1);
+    assertTrue(resp.error.range.startCol >= 1);
+  }
+
+  @Test
+  @Timeout(10)
+  void type_error_is_reported_with_range() throws Exception {
+    String spec = "sig A {}\n\npred p() { A in 1->A }\nrun p";
+    SolveRequest req = new SolveRequest();
+    req.spec = spec;
+    req.options = new SolveRequest.Options();
+    req.options.solver = "SAT4J";
+
+    SolveResponse resp = AlloyRunner.solve(req);
+    assertEquals("error", resp.status);
+    assertNotNull(resp.error);
+    assertEquals("type_error", resp.error.type);
+    assertNotNull(resp.error.range, "expected range on type_error");
+    assertTrue(resp.error.range.startLine >= 1);
+    assertTrue(resp.error.range.startCol >= 1);
   }
 
   @Test

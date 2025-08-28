@@ -110,6 +110,33 @@
   - Notes:
     - 2025-08-09: Expand test matrix and add snapshots.
 
+- ID: K-20250815-015
+  - Title: Azure pre-release (staging) with IP allowlist and caps
+  - Status: Doing
+  - Assignee: Unassigned
+  - Priority: P1
+  - Size: M
+  - Deps: [K-20250809-010, K-20250809-007]
+  - Blockers: ["Azure subscription access", "GHCR read token/PAT"]
+  - Links: `Dockerfile`, `.github/workflows/ci.yml`, `README.md`, `docs/openapi.yaml`
+  - Artifacts: []
+  - Acceptance:
+    - Container App deployed in Azure (staging) using immutable image tag (`:sha-<commit>`), reachable at a stable URL.
+    - Ingress restricted to allowlisted IPs via APIM (or equivalent) in front of the app; direct public access blocked.
+    - Runtime caps enforced: `MAX_MODEL_CHARS=200k`, `DEFAULT_TIMEOUT_MS=20s` (or `options.timeout_ms`), `MAX_INSTANCES=5`; container sized at ~0.5 CPU / 1Gi; autoscale min=0, max=2.
+    - `--self-check` passes in Azure container run; `/healthz` returns OK; SAT and UNSAT smoke calls succeed.
+    - Logs flow to Log Analytics; basic operator runbook captured (deploy, smoke, rollback using revisions).
+  - Notes:
+    - Use APIM inbound `ip-filter` allowlist and optional basic concurrency limit.
+    - Deploy with Container Apps revisions; validate at 0% traffic before promotion; rollback by re-pointing traffic to prior revision.
+  - Tasks —
+    1) Provision RG, Log Analytics, and Container Apps environment.
+    2) Push/pull GHCR image; deploy Container App `staging` with `--target-port 8080`, resource limits, autoscale 0..2.
+    3) Front with APIM: add IP allowlist policy and route to the Container App ingress.
+    4) Run smoke tests: `/healthz`, SAT run, UNSAT check; run one-off `--self-check` job in Azure.
+    5) Wire logs to Log Analytics; set simple alerts (restart count/5xx) if feasible.
+    6) Document endpoint URL and access policy in `README.md`; note gates (no multi-file `open`, keep caps).
+
 - ID: K-20250809-004
   - Title: Multi-module support with safe in-memory file provider
   - Status: Backlog
@@ -217,12 +244,45 @@
   - Notes:
     - 2025-08-09: Define release automation and tagging.
 
+- ID: K-20250828-016
+  - Title: Error reporting – include source range and types
+  - Status: Done
+  - Assignee: GPT-5
+  - Priority: P1
+  - Size: S
+  - Deps: []
+  - Blockers: []
+  - Links: `src/main/java/app/AlloyRunner.java`, `src/main/java/app/dto/SolveResponse.java`
+  - Artifacts: [`src/main/java/app/AlloyRunner.java`, `src/main/java/app/dto/SolveResponse.java`]
+  - Acceptance:
+    - Parse/type errors mapped to `parse_error`/`type_error`.
+    - `error.range{file,startLine,startCol,endLine,endCol}` present when available.
+    - Unit tests pass on SAT4J path.
+  - Notes:
+    - 2025-08-28: Catch Alloy `Err`, map to types, attach `Pos` as `range` in response; updated DTO.
+
+- ID: K-20250828-017
+  - Title: Execute all commands when selection omitted
+  - Status: Backlog
+  - Assignee: Unassigned
+  - Priority: P2
+  - Size: M
+  - Deps: [K-20250809-007, K-20250809-003]
+  - Blockers: []
+  - Links: `src/main/java/app/AlloyRunner.java`, `docs/openapi.yaml`, `src/main/java/app/dto/SolveResponse.java`, `docs/USER_REFERENCE.md`
+  - Artifacts: []
+  - Acceptance:
+    - When neither `target` nor `commandIndex` is provided, execute all parsed commands in order.
+    - Response surfaces per-command results (array), while preserving current single-command shape when a specific selection is made.
+    - OpenAPI and docs updated with multi-command examples and semantics (timeouts, caps per sub-command, aggregate status).
+    - Behavior is off by default initially; gated via option or explicit mode to maintain compatibility.
+  - Notes:
+    - Evaluate naming (`options.execute_all_when_unspecified`) and aggregation semantics for `status`, `warnings`, and `debug`.
+
 ## Board
 
 ### Backlog
 
-- [K-20250809-008] Testing – timeout, snapshot JSON, property-based options — Unassigned
-  - Links: `src/test/java/app/**`, `src/test/resources/models/**`
 - [K-20250809-004] Multi-module support with safe in-memory file provider — Unassigned
   - Links: `docs/PROJECT.md`, `src/main/java/app/AlloyRunner.java`
 - [K-20250809-011] Safety hardening and runtime limits — Unassigned
@@ -237,8 +297,16 @@
   - Links: `README.md`, `docs/PROJECT.md`
 - [K-20250809-014] Release workflow and image tagging — Unassigned
   - Links: `Dockerfile`, `README.md`
+- [K-20250809-008] Testing – timeout, snapshot JSON, property-based options — Unassigned
+  - Links: `src/test/java/app/**`, `src/test/resources/models/**`
+
+- [K-20250828-017] Execute all commands when selection omitted — Unassigned
+  - Links: `src/main/java/app/AlloyRunner.java`, `docs/openapi.yaml`, `src/main/java/app/dto/SolveResponse.java`, `docs/USER_REFERENCE.md`
 
 ### Doing
+
+- [K-20250815-015] Azure pre-release (staging) with IP allowlist and caps — Unassigned
+  - Links: `Dockerfile`, `.github/workflows/ci.yml`, `README.md`, `docs/openapi.yaml`
 
 ### Review
 
@@ -254,6 +322,8 @@
   - Links: `src/main/java/app/AlloyRunner.java`, `docs/PROJECT.md`, `src/test/java/app/AlloyRunnerSnapshotTest.java`, `README.md`
 - [K-20250809-007] OpenAPI spec for /v1/solve (Alloy.Api-aligned) — GPT-5
   - Links: `docs/PROJECT.md`, `src/main/java/app/App.java`
+- [K-20250828-016] Error reporting – include source range and types — GPT-5
+  - Links: `src/main/java/app/AlloyRunner.java`, `src/main/java/app/dto/SolveResponse.java`
 
 ## Archive
 
@@ -277,3 +347,8 @@
 - 2025-08-14 [GPT-5]: EDIT_CARD K-20250809-007 acceptance strengthened (OAS 3.1, JSON Schema nullables via oneOf, HTTP 200 semantics for ok/timeout, orchestration out-of-repo); RENDER_BOARD refreshed.
 - 2025-08-14 [GPT-5]: MOVE_CARD K-20250809-007 to Review; RENDER_BOARD refreshed.
 - 2025-08-14 [GPT-5]: MOVE_CARD K-20250809-007 to Done; RENDER_BOARD refreshed.
+- 2025-08-15 [GPT-5]: MOVE_CARD K-20250809-008 to Doing; RENDER_BOARD refreshed.
+- 2025-08-15 [GPT-5]: ADD_CARD K-20250815-015 Azure pre-release (staging) with IP allowlist and caps; RENDER_BOARD refreshed.
+- 2025-08-28 [GPT-5]: ADD_CARD K-20250828-016 Error reporting – include source range and types; RENDER_BOARD refreshed.
+- 2025-08-28 [GPT-5]: MOVE_CARD K-20250828-016 to Done; RENDER_BOARD refreshed.
+- 2025-08-28 [GPT-5]: ADD_CARD K-20250828-017 Execute all commands when selection omitted; RENDER_BOARD refreshed.
