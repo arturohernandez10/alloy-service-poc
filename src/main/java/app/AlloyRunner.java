@@ -4,6 +4,11 @@ import app.dto.SolveRequest;
 import app.dto.SolveResponse;
 
 import edu.mit.csail.sdg.alloy4.A4Reporter;
+import edu.mit.csail.sdg.alloy4.Err;
+import edu.mit.csail.sdg.alloy4.ErrorAPI;
+import edu.mit.csail.sdg.alloy4.ErrorFatal;
+import edu.mit.csail.sdg.alloy4.ErrorSyntax;
+import edu.mit.csail.sdg.alloy4.ErrorType;
 import edu.mit.csail.sdg.alloy4.Pair;
 import edu.mit.csail.sdg.alloy4.Pos;
 import edu.mit.csail.sdg.ast.Command;
@@ -64,6 +69,9 @@ public class AlloyRunner {
       return errorWithDebug(out, started, "timeout", "solve exceeded " + timeoutMs + " ms");
     } catch (ExecutionException ee) {
       Throwable cause = ee.getCause();
+      if (cause instanceof Err) {
+        return errorFromErr(out, started, (Err) cause, req.spec);
+      }
       String msg = cause != null ? cause.getMessage() : ee.getMessage();
       return errorWithDebug(out, started, "solver_error", msg);
     } catch (RejectedExecutionException ree) {
@@ -72,6 +80,7 @@ public class AlloyRunner {
   }
 
   private static SolveResponse executeSolve(SolveRequest req, long started, SolveResponse out) throws Exception {
+    try {
     // compute requested instance cap from scope (default 1)
     int requestedMaxInstances = 1;
     if (req.scope != null && req.scope.maxInstances != null && req.scope.maxInstances > 0) {
@@ -181,6 +190,9 @@ public class AlloyRunner {
 
     out.debug.durationMs = System.currentTimeMillis() - started;
     return out;
+    } catch (Err e) {
+      return errorFromErr(out, started, e, req.spec);
+    }
   }
 
   private static Command chooseCommand(List<Command> cmds, String label, Integer idx, String kind) {
@@ -205,7 +217,7 @@ public class AlloyRunner {
   private static void setSolver(A4Options opt, SolveRequest req) {
     String requested = (req != null && req.options != null && req.options.solver != null)
         ? req.options.solver
-        : "minisat.prover";
+        : "sat4j";
 
     // Normalize common legacy names to Alloy 6.2 ids
     String normalized = normalizeSolverId(requested);
@@ -224,7 +236,7 @@ public class AlloyRunner {
   }
 
   private static String normalizeSolverId(String id) {
-    if (id == null) return "minisat.prover";
+    if (id == null) return "sat4j";
     String s = id.trim();
     if (s.equalsIgnoreCase("MiniSatProverJNI") || s.equalsIgnoreCase("MiniSatProver")
         || s.equalsIgnoreCase("MINISAT_PROVER") || s.equalsIgnoreCase("MINISAT.PROVER")) {
@@ -243,16 +255,82 @@ public class AlloyRunner {
   }
 
   private static Map<String,Object> serializeInstance(Module world, A4Solution sol) throws Exception {
-    Map<String,Object> m = new LinkedHashMap<>();
-    for (Sig s : world.getAllReachableSigs()) {
-      m.put("sig:" + s.label, sol.eval(s).toString());
-      s.getFields().forEach(f -> {
+    Map<String, Object> instance = new LinkedHashMap<>();
+    Map<String, List<String>> atomsBySig = new LinkedHashMap<>();
+    Map<String, List<List<String>>> tuplesByRelation = new LinkedHashMap<>();
+
+    // Collect and sort reachable sigs deterministically by normalized label
+    List<Sig> sigs = new ArrayList<>(world.getAllReachableSigs());
+    sigs.sort(Comparator.comparing(s -> normalizeLabel(s.label)));
+
+    for (Sig sig : sigs) {
+      String sigLabel = normalizeLabel(sig.label);
+      if (isBuiltinSigLabel(sigLabel)) continue;
+
+      // Atoms for this sig (unary)
+      try {
+        A4TupleSet ts = sol.eval(sig);
+        List<String> atoms = new ArrayList<>();
+        for (A4Tuple t : ts) {
+          // Unary tuples: arity==1
+          atoms.add(normalizeLabel(t.atom(0)));
+        }
+        atoms.sort(Comparator.naturalOrder());
+        atomsBySig.put(sigLabel, atoms);
+      } catch (Throwable ignored) {}
+
+      // Fields (relations)
+      List<edu.mit.csail.sdg.ast.Sig.Field> fields = new ArrayList<edu.mit.csail.sdg.ast.Sig.Field>();
+      for (edu.mit.csail.sdg.ast.Sig.Field f0 : sig.getFields()) fields.add(f0);
+      fields.sort(Comparator.comparing(f -> normalizeLabel(f.label)));
+      for (edu.mit.csail.sdg.ast.Sig.Field f : fields) {
+        String relKey = sigLabel + "." + normalizeLabel(f.label);
         try {
-          m.put("field:" + s.label + "." + f.label, sol.eval(f).toString());
-        } catch (Exception ignored) {}
-      });
+          A4TupleSet fs = sol.eval(f);
+          List<List<String>> tuples = new ArrayList<>();
+          for (A4Tuple t : fs) {
+            int arity = t.arity();
+            List<String> tuple = new ArrayList<>(arity);
+            for (int i = 0; i < arity; i++) {
+              tuple.add(normalizeLabel(t.atom(i)));
+            }
+            tuples.add(tuple);
+          }
+          // Sort tuples lexicographically for determinism
+          tuples.sort((a, b) -> {
+            int n = Math.min(a.size(), b.size());
+            for (int i = 0; i < n; i++) {
+              int c = a.get(i).compareTo(b.get(i));
+              if (c != 0) return c;
+            }
+            return Integer.compare(a.size(), b.size());
+          });
+          tuplesByRelation.put(relKey, tuples);
+        } catch (Throwable ignored) {}
+      }
     }
-    return m;
+
+    instance.put("atoms", atomsBySig);
+    instance.put("relations", tuplesByRelation);
+    return instance;
+  }
+
+  private static boolean isBuiltinSigLabel(String normalizedLabel) {
+    // Conservative filter by label; Alloy builtins typically include these labels
+    return normalizedLabel == null || normalizedLabel.isEmpty()
+        || normalizedLabel.equals("univ")
+        || normalizedLabel.equals("Int")
+        || normalizedLabel.equals("seq/Int")
+        || normalizedLabel.equals("String")
+        || normalizedLabel.equals("iden")
+        || normalizedLabel.equals("none");
+  }
+
+  private static String normalizeLabel(String label) {
+    if (label == null) return null;
+    String s = label;
+    if (s.startsWith("this/")) s = s.substring(5);
+    return s;
   }
 
   private static SolveResponse.UnsatCore buildCore(String source, A4Solution sol) {
@@ -277,6 +355,29 @@ public class AlloyRunner {
     String snippet = slice(source, r.startLine, r.startCol, r.endLine, r.endCol);
     if (snippet != null && !snippet.isBlank()) snippets.put(r.id, snippet);
     return r;
+  }
+
+  private static SolveResponse errorFromErr(SolveResponse base, long started, Err e, String source) {
+    SolveResponse r = base != null ? base : new SolveResponse();
+    r.status = "error";
+    r.error = new SolveResponse.ErrorInfo();
+    r.error.type = mapErrType(e);
+    r.error.message = e.getMessage();
+    if (e.pos != null && e.pos != Pos.UNKNOWN) {
+      Map<String,String> scratch = new LinkedHashMap<>();
+      r.error.range = toRange(e.pos, source, scratch);
+    }
+    if (r.debug == null) r.debug = new SolveResponse.Debug();
+    r.debug.durationMs = System.currentTimeMillis() - started;
+    return r;
+  }
+
+  private static String mapErrType(Err e) {
+    if (e instanceof ErrorSyntax) return "parse_error";
+    if (e instanceof ErrorType) return "type_error";
+    if (e instanceof ErrorAPI) return "bad_request";
+    if (e instanceof ErrorFatal) return "solver_error";
+    return "solver_error";
   }
 
   private static String slice(String text, int y1, int x1, int y2, int x2) {
