@@ -262,9 +262,9 @@
     - 2025-08-28: Catch Alloy `Err`, map to types, attach `Pos` as `range` in response; updated DTO.
 
 - ID: K-20250828-017
-  - Title: Execute all commands when selection omitted
-  - Status: Backlog
-  - Assignee: Unassigned
+  - Title: Epic — Execute all commands when selection omitted
+  - Status: Doing
+  - Assignee: GPT-5
   - Priority: P2
   - Size: M
   - Deps: [K-20250809-007, K-20250809-003]
@@ -272,12 +272,122 @@
   - Links: `src/main/java/app/AlloyRunner.java`, `docs/openapi.yaml`, `src/main/java/app/dto/SolveResponse.java`, `docs/USER_REFERENCE.md`
   - Artifacts: []
   - Acceptance:
-    - When neither `target` nor `commandIndex` is provided, execute all parsed commands in order.
-    - Response surfaces per-command results (array), while preserving current single-command shape when a specific selection is made.
-    - OpenAPI and docs updated with multi-command examples and semantics (timeouts, caps per sub-command, aggregate status).
+    - High-level: When selection is omitted, execute multiple commands and aggregate results (`results[]`). Single-command fields MUST be null at top-level in this mode.
+    - Success criteria: detailed semantics are implemented in child cards K-20250828-020 (DTO), K-20250828-021 (runner behavior and gating), K-20250828-022 (docs/OpenAPI), and K-20250828-023 (default flip); tests/docs green.
     - Behavior is off by default initially; gated via option or explicit mode to maintain compatibility.
-  - Notes:
-    - Evaluate naming (`options.execute_all_when_unspecified`) and aggregation semantics for `status`, `warnings`, and `debug`.
+  - Children: [K-20250828-018, K-20250828-019, K-20250828-020, K-20250828-021, K-20250828-022, K-20250828-023, K-20250828-024]
+
+- ID: K-20250828-018
+  - Title: Runner refactor: extract instance serialization
+  - Status: Backlog
+  - Assignee: GPT-5
+  - Priority: P1
+  - Size: S
+  - Deps: []
+  - Blockers: []
+  - Links: `src/main/java/app/AlloyRunner.java`
+  - Artifacts: [`src/main/java/app/core/InstanceSerializer.java` (new), `src/main/java/app/AlloyRunner.java`]
+  - Acceptance:
+    - `serializeInstance(...)`, `normalizeLabel(...)`, `isBuiltinSigLabel(...)` moved to `app.core.InstanceSerializer`.
+    - `AlloyRunner` delegates to `InstanceSerializer`; no behavior change; all tests green.
+
+- ID: K-20250828-019
+  - Title: Runner refactor: extract per-command executor
+  - Status: Backlog
+  - Assignee: GPT-5
+  - Priority: P1
+  - Size: M
+  - Deps: [K-20250828-018]
+  - Blockers: []
+  - Links: `src/main/java/app/AlloyRunner.java`
+  - Artifacts: [`src/main/java/app/core/CommandExecutor.java` (new), `src/main/java/app/AlloyRunner.java`]
+  - Acceptance:
+    - Create `app.core.CommandExecutor` with `execute(world, cmd, options, caps) -> CommandResult` (internal type).
+    - `AlloyRunner` keeps validation, timeout, solver selection, error mapping; delegates command execution.
+    - No behavior change; existing tests green.
+
+- ID: K-20250828-020
+  - Title: DTO scaffolding for multi-command results
+  - Status: Backlog
+  - Assignee: GPT-5
+  - Priority: P2
+  - Size: S
+  - Deps: [K-20250828-019]
+  - Blockers: []
+  - Links: `src/main/java/app/dto/SolveResponse.java`
+  - Artifacts: [`src/main/java/app/dto/SolveResponse.java`]
+  - Acceptance:
+    - Add `SolveResponse.CommandResult` with fields mirroring the single-command shape: `command`, `satisfiable`, `instances`, `unsat_core`, `warnings`, `debug`, `error`; and add top-level `List<CommandResult> results`.
+    - Include `CommandResult.debug` to carry per-result solver info; top-level `debug` remains request-level.
+    - Shape invariant: when `results` is present, top-level `satisfiable`, `instances`, `unsat_core`, `command`, and `error` MUST be null. No population yet; no behavior change.
+    - Compilation and tests remain green.
+
+- ID: K-20250828-021
+  - Title: Feature: execute all when unspecified (gated, default OFF)
+  - Status: Backlog
+  - Assignee: GPT-5
+  - Priority: P1
+  - Size: M
+  - Deps: [K-20250828-019, K-20250828-020]
+  - Blockers: []
+  - Links: `src/main/java/app/AlloyRunner.java`, `src/main/java/app/core/CommandExecutor.java`, `src/main/java/app/dto/SolveRequest.java`, `src/test/java/app/**`
+  - Artifacts: []
+  - Acceptance:
+    - Add `options.execute_all_when_unspecified` (Boolean) to request DTO.
+    - When gate true and no `target`/`commandIndex`, execute multiple commands: if `command` is provided, execute commands of that kind; otherwise execute all; preserve source order in `results[]`.
+    - Enforce a shared internal deadline derived from `options.timeout_ms`; on deadline, return partial `results[]` for completed sub-commands only and set top-level `status=timeout`.
+    - Define completed sub-command: SAT/UNSAT reached and either instance enumeration finished (up to per-result cap) or UNSAT-core extraction attempt completed. Sub-commands in progress at timeout are omitted.
+    - Apply `scope.max_instances` per sub-command, subject to service hard cap. Single-command fields are null in multi-command mode.
+    - Execution errors post-parse/typecheck are captured in `results[i].error`; continue with subsequent commands. Global parse/type errors remain top-level and abort multi-command mode.
+    - Existing tests unchanged and green; add tests covering SAT/UNSAT mix, run/check filtering, ordering, sub-command error continuation, and partial results under timeout.
+
+- ID: K-20250828-022
+  - Title: Docs and OpenAPI for multi-command mode
+  - Status: Backlog
+  - Assignee: GPT-5
+  - Priority: P2
+  - Size: S
+  - Deps: [K-20250828-021]
+  - Blockers: []
+  - Links: `docs/openapi.yaml`, `docs/USER_REFERENCE.md`
+  - Artifacts: [`docs/openapi.yaml`, `docs/USER_REFERENCE.md`]
+  - Acceptance:
+    - Document `options.execute_all_when_unspecified`, dual response shapes, and aggregation semantics.
+    - Use presence of `results` to indicate multi-command shape; document that top-level `satisfiable`, `instances`, `unsat_core`, `command`, and `error` are null in this mode.
+    - Clarify `scope.max_instances` applies per result; explain top-level vs per-result warnings and debug placement.
+    - Add examples for: (a) single-command; (b) mixed SAT/UNSAT multi-command; (c) run-only filtered multi-command; (d) partial-timeout with completed-only `results`; (e) empty `results` with "no commands found" warning.
+    - Lint OpenAPI; examples match current gated behavior (default OFF).
+
+- ID: K-20250828-023
+  - Title: Flip default ON for execute-all and align tests
+  - Status: Backlog
+  - Assignee: GPT-5
+  - Priority: P2
+  - Size: S
+  - Deps: [K-20250828-021, K-20250828-022]
+  - Blockers: []
+  - Links: `src/main/java/app/AlloyRunner.java`, `src/main/java/app/dto/SolveRequest.java`, `src/test/java/app/**`
+  - Artifacts: []
+  - Acceptance:
+    - Default `execute_all_when_unspecified` to true when absent; confirm behavior with and without explicit selection to ensure backward compatibility.
+    - Update tests to either select a command or assert `results[]` (and shape invariants) as appropriate.
+    - Docs updated to reflect default behavior and how to opt out (specify a selection or set the gate false).
+    - All tests green.
+
+- ID: K-20250828-024
+  - Title: Cleanup: remove migrated helpers and tighten boundaries
+  - Status: Backlog
+  - Assignee: GPT-5
+  - Priority: P3
+  - Size: S
+  - Deps: [K-20250828-019]
+  - Blockers: []
+  - Links: `src/main/java/app/AlloyRunner.java`
+  - Artifacts: [`src/main/java/app/AlloyRunner.java`]
+  - Acceptance:
+    - Remove redundant private helpers superseded by `InstanceSerializer`/`CommandExecutor`.
+    - Ensure `AlloyRunner.solve(...)` remains the only outer boundary for validation/timeout/error mapping.
+    - Tests green.
 
 ## Board
 
@@ -299,14 +409,28 @@
   - Links: `Dockerfile`, `README.md`
 - [K-20250809-008] Testing – timeout, snapshot JSON, property-based options — Unassigned
   - Links: `src/test/java/app/**`, `src/test/resources/models/**`
-
-- [K-20250828-017] Execute all commands when selection omitted — Unassigned
-  - Links: `src/main/java/app/AlloyRunner.java`, `docs/openapi.yaml`, `src/main/java/app/dto/SolveResponse.java`, `docs/USER_REFERENCE.md`
+- [K-20250828-018] Runner refactor: extract instance serialization — GPT-5
+  - Links: `src/main/java/app/AlloyRunner.java`
+- [K-20250828-019] Runner refactor: extract per-command executor — GPT-5
+  - Links: `src/main/java/app/AlloyRunner.java`
+- [K-20250828-020] DTO scaffolding for multi-command results — GPT-5
+  - Links: `src/main/java/app/dto/SolveResponse.java`
+- [K-20250828-021] Feature: execute all when unspecified (gated, default OFF) — GPT-5
+  - Links: `src/main/java/app/AlloyRunner.java`, `src/main/java/app/dto/SolveRequest.java`
+- [K-20250828-022] Docs and OpenAPI for multi-command mode — GPT-5
+  - Links: `docs/openapi.yaml`, `docs/USER_REFERENCE.md`
+- [K-20250828-023] Flip default ON for execute-all and align tests — GPT-5
+  - Links: `src/main/java/app/AlloyRunner.java`, `src/test/java/app/**`
+- [K-20250828-024] Cleanup: remove migrated helpers and tighten boundaries — GPT-5
+  - Links: `src/main/java/app/AlloyRunner.java`
 
 ### Doing
 
 - [K-20250815-015] Azure pre-release (staging) with IP allowlist and caps — Unassigned
   - Links: `Dockerfile`, `.github/workflows/ci.yml`, `README.md`, `docs/openapi.yaml`
+
+- [K-20250828-017] Execute all commands when selection omitted — GPT-5
+  - Links: `src/main/java/app/AlloyRunner.java`, `docs/openapi.yaml`, `src/main/java/app/dto/SolveResponse.java`, `docs/USER_REFERENCE.md`
 
 ### Review
 
@@ -352,3 +476,12 @@
 - 2025-08-28 [GPT-5]: ADD_CARD K-20250828-016 Error reporting – include source range and types; RENDER_BOARD refreshed.
 - 2025-08-28 [GPT-5]: MOVE_CARD K-20250828-016 to Done; RENDER_BOARD refreshed.
 - 2025-08-28 [GPT-5]: ADD_CARD K-20250828-017 Execute all commands when selection omitted; RENDER_BOARD refreshed.
+- 2025-08-28 [GPT-5]: EDIT_CARD K-20250828-017 added plan/tasks/tests; MOVE_CARD to Doing; RENDER_BOARD refreshed.
+- 2025-08-28 [GPT-5]: EDIT_CARD K-20250828-017 converted to Epic; RENDER_BOARD refreshed.
+- 2025-08-28 [GPT-5]: ADD_CARD K-20250828-018 Runner refactor: extract instance serialization; RENDER_BOARD refreshed.
+- 2025-08-28 [GPT-5]: ADD_CARD K-20250828-019 Runner refactor: extract per-command executor; RENDER_BOARD refreshed.
+- 2025-08-28 [GPT-5]: ADD_CARD K-20250828-020 DTO scaffolding for multi-command results; RENDER_BOARD refreshed.
+- 2025-08-28 [GPT-5]: ADD_CARD K-20250828-021 Feature: execute all when unspecified (gated, default OFF); RENDER_BOARD refreshed.
+- 2025-08-28 [GPT-5]: ADD_CARD K-20250828-022 Docs and OpenAPI for multi-command mode; RENDER_BOARD refreshed.
+- 2025-08-28 [GPT-5]: ADD_CARD K-20250828-023 Flip default ON for execute-all and align tests; RENDER_BOARD refreshed.
+- 2025-08-28 [GPT-5]: ADD_CARD K-20250828-024 Cleanup: remove migrated helpers and tighten boundaries; RENDER_BOARD refreshed.
