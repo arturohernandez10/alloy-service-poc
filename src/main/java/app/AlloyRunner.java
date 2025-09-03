@@ -223,8 +223,18 @@ public class AlloyRunner {
         } catch (ExecutionException ee) {
           Throwable t = ee.getCause();
           rr.error = new SolveResponse.ErrorInfo();
-          rr.error.type = "solver_error";
-          rr.error.message = (t != null ? t.getMessage() : ee.getMessage());
+          if (t instanceof Err) {
+            Err e = (Err) t;
+            rr.error.type = mapErrType(e);
+            rr.error.message = e.getMessage();
+            if (e.pos != null && e.pos != Pos.UNKNOWN) {
+              Map<String,String> scratch = new LinkedHashMap<>();
+              rr.error.range = toRange(e.pos, req.spec, scratch);
+            }
+          } else {
+            rr.error.type = "solver_error";
+            rr.error.message = (t != null ? t.getMessage() : ee.getMessage());
+          }
           rr.debug = new SolveResponse.Debug();
           rr.debug.solverId = getSolverId(opt);
           rr.debug.durationMs = System.currentTimeMillis() - subStart;
