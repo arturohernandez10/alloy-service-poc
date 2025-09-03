@@ -1,6 +1,5 @@
 {
-  "snapshot": "POPULATED_FROM_SETTINGS",
-  "install": "set -eux; sudo apt-get update -y; sudo apt-get install -y openjdk-17-jdk maven libgmp10 libstdc++6 libgcc-s1; mvn -q -DskipTests dependency:go-offline",
+  "install": "set -eux; mvn -q -B -T1C -DskipTests dependency:go-offline",
   "terminals": [
     {
       "name": "Run service",
@@ -14,7 +13,9 @@
       "name": "Self-check (unsat core)",
       "command": "mvn -q -DskipTests package && java -jar target/alloy-service-poc-0.1.0.jar --self-check || true"
     }
-  ]
+  ],
+  "build": {
+    "context": ".",
+    "dockerfile": "Dockerfile.cursor"
+  }
 }
-
-

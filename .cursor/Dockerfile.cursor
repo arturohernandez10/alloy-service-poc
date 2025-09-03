@@ -1,0 +1,12 @@
+FROM eclipse-temurin:17-jdk-jammy
+
+# Build/tooling and native solver dependencies
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends maven libgmp10 libstdc++6 libgcc-s1 \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /workspace
+
+# No COPY or ENTRYPOINT here — Cursor mounts the workspace and runs commands
+
+
