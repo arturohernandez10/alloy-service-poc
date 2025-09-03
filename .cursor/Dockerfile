@@ -1,0 +1,18 @@
+FROM eclipse-temurin:17-jdk-jammy
+
+# Build/tooling and native solver dependencies
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends maven git libgmp10 libstdc++6 libgcc-s1 \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN echo "Applied apt-get update and installed maven git libgmp10 libstdc++6 libgcc-s1"
+
+
+WORKDIR /workspace
+
+# Add hello message for error tracing
+RUN echo "Hello from Alloy Service POC container - ready for commands"
+
+# No COPY or ENTRYPOINT here — Cursor mounts the workspace and runs commands
+
+
