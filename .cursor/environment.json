@@ -1,0 +1,21 @@
+{
+  "snapshot": "POPULATED_FROM_SETTINGS",
+  "install": "set -eux; sudo apt-get update -y; sudo apt-get install -y openjdk-17-jdk maven libgmp10 libstdc++6 libgcc-s1; mvn -q -DskipTests dependency:go-offline",
+  "start": "",
+  "terminals": [
+    {
+      "name": "Run service",
+      "command": "mvn -q -DskipTests package && PORT=${PORT:-8080} java -jar target/alloy-service-poc-0.1.0.jar"
+    },
+    {
+      "name": "Run tests",
+      "command": "mvn -q test"
+    },
+    {
+      "name": "Self-check (unsat core)",
+      "command": "mvn -q -DskipTests package && java -jar target/alloy-service-poc-0.1.0.jar --self-check || true"
+    }
+  ]
+}
+
+
