@@ -308,7 +308,7 @@
 
 - ID: K-20250828-020
   - Title: DTO scaffolding for multi-command results
-  - Status: Backlog
+  - Status: Done
   - Assignee: GPT-5
   - Priority: P2
   - Size: S
@@ -321,6 +321,8 @@
     - Include `CommandResult.debug` to carry per-result solver info; top-level `debug` remains request-level.
     - Shape invariant: when `results` is present, top-level `satisfiable`, `instances`, `unsat_core`, `command`, and `error` MUST be null. No population yet; no behavior change.
     - Compilation and tests remain green.
+  - Notes:
+    - 2025-09-03: Implemented `CommandResult` and `results` scaffolding; build and tests green.
 
 - ID: K-20250828-021
   - Title: Feature: execute all when unspecified (gated, default OFF)
@@ -413,8 +415,7 @@
   - Links: `src/main/java/app/AlloyRunner.java`
 - [K-20250828-019] Runner refactor: extract per-command executor — GPT-5
   - Links: `src/main/java/app/AlloyRunner.java`
-- [K-20250828-020] DTO scaffolding for multi-command results — GPT-5
-  - Links: `src/main/java/app/dto/SolveResponse.java`
+  
 - [K-20250828-021] Feature: execute all when unspecified (gated, default OFF) — GPT-5
   - Links: `src/main/java/app/AlloyRunner.java`, `src/main/java/app/dto/SolveRequest.java`
 - [K-20250828-022] Docs and OpenAPI for multi-command mode — GPT-5
@@ -448,6 +449,8 @@
   - Links: `docs/PROJECT.md`, `src/main/java/app/App.java`
 - [K-20250828-016] Error reporting – include source range and types — GPT-5
   - Links: `src/main/java/app/AlloyRunner.java`, `src/main/java/app/dto/SolveResponse.java`
+ - [K-20250828-020] DTO scaffolding for multi-command results — GPT-5
+  - Links: `src/main/java/app/dto/SolveResponse.java`
 
 ## Archive
 
@@ -485,3 +488,4 @@
 - 2025-08-28 [GPT-5]: ADD_CARD K-20250828-022 Docs and OpenAPI for multi-command mode; RENDER_BOARD refreshed.
 - 2025-08-28 [GPT-5]: ADD_CARD K-20250828-023 Flip default ON for execute-all and align tests; RENDER_BOARD refreshed.
 - 2025-08-28 [GPT-5]: ADD_CARD K-20250828-024 Cleanup: remove migrated helpers and tighten boundaries; RENDER_BOARD refreshed.
+ - 2025-09-03 [GPT-5]: MOVE_CARD K-20250828-020 to Done; EDIT_CARD implementation notes; RENDER_BOARD refreshed.
