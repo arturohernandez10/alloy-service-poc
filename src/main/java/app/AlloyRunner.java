@@ -1,4 +1,5 @@
 package app;
+import app.core.CommandExecutor;
 
 import app.dto.SolveRequest;
 import app.dto.SolveResponse;
@@ -155,38 +156,18 @@ public class AlloyRunner {
       }
     }
 
-    A4Reporter NOP = A4Reporter.NOP;
-    List<Map<String,Object>> instances = new ArrayList<>();
-    A4Solution sol = TranslateAlloyToKodkod.execute_command(NOP, world.getAllReachableSigs(), adjusted, opt);
-    if (sol.satisfiable()) {
-      int max = Math.max(1, requestedMaxInstances);
-      int produced = 0;
-      while (!Thread.currentThread().isInterrupted() && sol.satisfiable() && produced < max) {
-        instances.add(serializeInstance(world, sol));
-        produced++;
-        sol = sol.next();
-      }
-      out.status = "ok";
-      out.satisfiable = true;
-    } else {
-      out.status = "ok";
-      out.satisfiable = false;
-      // Build unsat core only when solver supports it (prover path)
-      try {
-        if (opt != null && opt.solver != null && opt.solver.prover()) {
-          out.unsatCore = buildCore(req.spec, sol);
-        }
-      } catch (Throwable ignored) {
-        // leave core null on unsupported environments
-      }
-    }
-    out.instances = instances;
+    CommandExecutor.CommandResult cr = CommandExecutor.execute(world, adjusted, opt,
+        requestedMaxInstances, MAX_INSTANCES, req.spec);
+    out.status = "ok";
+    out.satisfiable = cr.satisfiable;
+    out.unsatCore = cr.unsatCore;
+    out.instances = cr.instances;
     out.debug.solverId = getSolverId(opt);
     // bitwidth/maxSeq introspection omitted for portability across API versions
     out.debug.bitwidth = null;
     out.debug.maxSeq = null;
     out.debug.originalFile = opt.originalFilename;
-    if (opt.recordKodkod) out.debug.kodkod = sol.debugExtractKInput();
+    if (opt.recordKodkod) out.debug.kodkod = cr.kodkod;
 
     out.debug.durationMs = System.currentTimeMillis() - started;
     return out;
@@ -254,84 +235,7 @@ public class AlloyRunner {
     } catch (Exception e) { return null; }
   }
 
-  private static Map<String,Object> serializeInstance(Module world, A4Solution sol) throws Exception {
-    Map<String, Object> instance = new LinkedHashMap<>();
-    Map<String, List<String>> atomsBySig = new LinkedHashMap<>();
-    Map<String, List<List<String>>> tuplesByRelation = new LinkedHashMap<>();
-
-    // Collect and sort reachable sigs deterministically by normalized label
-    List<Sig> sigs = new ArrayList<>(world.getAllReachableSigs());
-    sigs.sort(Comparator.comparing(s -> normalizeLabel(s.label)));
-
-    for (Sig sig : sigs) {
-      String sigLabel = normalizeLabel(sig.label);
-      if (isBuiltinSigLabel(sigLabel)) continue;
-
-      // Atoms for this sig (unary)
-      try {
-        A4TupleSet ts = sol.eval(sig);
-        List<String> atoms = new ArrayList<>();
-        for (A4Tuple t : ts) {
-          // Unary tuples: arity==1
-          atoms.add(normalizeLabel(t.atom(0)));
-        }
-        atoms.sort(Comparator.naturalOrder());
-        atomsBySig.put(sigLabel, atoms);
-      } catch (Throwable ignored) {}
-
-      // Fields (relations)
-      List<edu.mit.csail.sdg.ast.Sig.Field> fields = new ArrayList<edu.mit.csail.sdg.ast.Sig.Field>();
-      for (edu.mit.csail.sdg.ast.Sig.Field f0 : sig.getFields()) fields.add(f0);
-      fields.sort(Comparator.comparing(f -> normalizeLabel(f.label)));
-      for (edu.mit.csail.sdg.ast.Sig.Field f : fields) {
-        String relKey = sigLabel + "." + normalizeLabel(f.label);
-        try {
-          A4TupleSet fs = sol.eval(f);
-          List<List<String>> tuples = new ArrayList<>();
-          for (A4Tuple t : fs) {
-            int arity = t.arity();
-            List<String> tuple = new ArrayList<>(arity);
-            for (int i = 0; i < arity; i++) {
-              tuple.add(normalizeLabel(t.atom(i)));
-            }
-            tuples.add(tuple);
-          }
-          // Sort tuples lexicographically for determinism
-          tuples.sort((a, b) -> {
-            int n = Math.min(a.size(), b.size());
-            for (int i = 0; i < n; i++) {
-              int c = a.get(i).compareTo(b.get(i));
-              if (c != 0) return c;
-            }
-            return Integer.compare(a.size(), b.size());
-          });
-          tuplesByRelation.put(relKey, tuples);
-        } catch (Throwable ignored) {}
-      }
-    }
-
-    instance.put("atoms", atomsBySig);
-    instance.put("relations", tuplesByRelation);
-    return instance;
-  }
-
-  private static boolean isBuiltinSigLabel(String normalizedLabel) {
-    // Conservative filter by label; Alloy builtins typically include these labels
-    return normalizedLabel == null || normalizedLabel.isEmpty()
-        || normalizedLabel.equals("univ")
-        || normalizedLabel.equals("Int")
-        || normalizedLabel.equals("seq/Int")
-        || normalizedLabel.equals("String")
-        || normalizedLabel.equals("iden")
-        || normalizedLabel.equals("none");
-  }
-
-  private static String normalizeLabel(String label) {
-    if (label == null) return null;
-    String s = label;
-    if (s.startsWith("this/")) s = s.substring(5);
-    return s;
-  }
+  // Instance serialization helpers moved to app.core.InstanceSerializer
 
   private static SolveResponse.UnsatCore buildCore(String source, A4Solution sol) {
     SolveResponse.UnsatCore core = new SolveResponse.UnsatCore();
