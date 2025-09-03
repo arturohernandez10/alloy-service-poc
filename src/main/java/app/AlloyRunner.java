@@ -98,8 +98,9 @@ public class AlloyRunner {
     // Alloy 6: parse via file-based API to ensure correct typechecking
     Module world = CompUtil.parseEverything_fromString(A4Reporter.NOP, req.spec);
     List<Command> cmds = world.getAllCommands();
-    Command choice = chooseCommand(cmds, req.target, req.commandIndex, req.command);
-    out.command = choice.toString();
+
+    boolean gate = req.options != null && Boolean.TRUE.equals(req.options.executeAllWhenUnspecified);
+    boolean noSelection = (req.target == null && req.commandIndex == null);
 
     A4Options opt = new A4Options();
     setSolver(opt, req);
@@ -117,12 +118,10 @@ public class AlloyRunner {
       long seed = req.options.seed.longValue();
       out.debug.seed = seed;
       try {
-        // Try a direct hook if present in this Alloy/Kodkod version
         java.lang.reflect.Method m = opt.getClass().getMethod("setRandomSeed", long.class);
         m.invoke(opt, seed);
       } catch (Throwable t1) {
         try {
-          // Some versions expose Kodkod Options through a field; attempt to reach and set there
           java.lang.reflect.Field f = opt.getClass().getDeclaredField("kkOptions");
           f.setAccessible(true);
           Object kk = f.get(opt);
@@ -142,8 +141,110 @@ public class AlloyRunner {
       }
     }
 
+    if (gate && noSelection) {
+      // Multi-command mode
+      out.results = new ArrayList<>();
+      // Top-level single-command fields MUST remain null when results are present
+      out.satisfiable = null;
+      out.instances = null;
+      out.unsatCore = null;
+      out.command = null;
+      out.error = null;
+
+      // Selection: filter by kind when req.command is provided
+      List<Command> selected = new ArrayList<>();
+      if (req.command != null) {
+        boolean wantCheck = "check".equalsIgnoreCase(req.command);
+        boolean wantRun = "run".equalsIgnoreCase(req.command);
+        for (Command c : cmds) {
+          if ((wantCheck && c.check) || (wantRun && !c.check)) selected.add(c);
+        }
+      } else {
+        selected.addAll(cmds);
+      }
+
+      long timeoutMs = (req.options != null && req.options.timeoutMs != null && req.options.timeoutMs > 0)
+          ? req.options.timeoutMs.longValue()
+          : DEFAULT_TIMEOUT_MS;
+      long deadline = started + timeoutMs;
+
+      for (int i = 0; i < selected.size(); i++) {
+        long now = System.currentTimeMillis();
+        if (now >= deadline) {
+          out.status = "timeout";
+          out.debug.durationMs = now - started;
+          return out; // completed sub-commands only are in results
+        }
+        long remaining = Math.max(0, deadline - now);
+
+        Command base = selected.get(i);
+        Command adjusted = base;
+        if (req.scope != null) {
+          if (req.scope.bitwidth != null) {
+            out.warnings.add("bitwidth override not wired to Command in this build");
+          }
+          if (req.scope.exactScopes != null) {
+            for (Sig s : world.getAllReachableSigs()) {
+              Integer n = req.scope.exactScopes.get(s.label);
+              if (n != null) adjusted = adjusted.change(s, true, n);
+            }
+          }
+        }
+
+        long subStart = System.currentTimeMillis();
+        SolveResponse.CommandResult rr = new SolveResponse.CommandResult();
+        rr.command = base.toString();
+
+        final Module worldF = world;
+        final Command adjustedF = adjusted;
+        final A4Options optF = opt;
+        final int reqMaxF = requestedMaxInstances;
+        final int hardCapF = MAX_INSTANCES;
+        final String sourceF = req.spec;
+        Callable<CommandExecutor.CommandResult> callable = () ->
+            CommandExecutor.execute(worldF, adjustedF, optF, reqMaxF, hardCapF, sourceF);
+
+        Future<CommandExecutor.CommandResult> subFuture = EXECUTOR.submit(callable);
+        try {
+          CommandExecutor.CommandResult cr = subFuture.get(remaining, TimeUnit.MILLISECONDS);
+          rr.satisfiable = cr.satisfiable;
+          rr.unsatCore = cr.unsatCore;
+          rr.instances = cr.instances;
+          rr.debug = new SolveResponse.Debug();
+          rr.debug.solverId = getSolverId(opt);
+          rr.debug.durationMs = System.currentTimeMillis() - subStart;
+          if (opt.recordKodkod) rr.debug.kodkod = cr.kodkod;
+          out.results.add(rr); // only append completed sub-commands
+        } catch (TimeoutException te) {
+          subFuture.cancel(true);
+          out.status = "timeout";
+          out.debug.durationMs = System.currentTimeMillis() - started;
+          return out; // omit in-progress sub-command
+        } catch (ExecutionException ee) {
+          Throwable t = ee.getCause();
+          rr.error = new SolveResponse.ErrorInfo();
+          rr.error.type = "solver_error";
+          rr.error.message = (t != null ? t.getMessage() : ee.getMessage());
+          rr.debug = new SolveResponse.Debug();
+          rr.debug.solverId = getSolverId(opt);
+          rr.debug.durationMs = System.currentTimeMillis() - subStart;
+          out.results.add(rr);
+        }
+      }
+      out.status = "ok";
+      out.debug.solverId = getSolverId(opt);
+      out.debug.bitwidth = null;
+      out.debug.maxSeq = null;
+      out.debug.originalFile = opt.originalFilename;
+      out.debug.durationMs = System.currentTimeMillis() - started;
+      return out;
+    }
+
+    // Single-command mode
+    Command choice = chooseCommand(cmds, req.target, req.commandIndex, req.command);
+    out.command = choice.toString();
+
     Command adjusted = choice;
-    // Apply scope overrides if provided
     if (req.scope != null) {
       if (req.scope.bitwidth != null) {
         out.warnings.add("bitwidth override not wired to Command in this build");
@@ -163,7 +264,6 @@ public class AlloyRunner {
     out.unsatCore = cr.unsatCore;
     out.instances = cr.instances;
     out.debug.solverId = getSolverId(opt);
-    // bitwidth/maxSeq introspection omitted for portability across API versions
     out.debug.bitwidth = null;
     out.debug.maxSeq = null;
     out.debug.originalFile = opt.originalFilename;

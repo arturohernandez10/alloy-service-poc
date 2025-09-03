@@ -50,6 +50,8 @@ public class SolveRequest {
     @JsonProperty("timeout_ms")
     public Integer timeoutMs;
     public Integer seed;
+    @JsonProperty("execute_all_when_unspecified")
+    public Boolean executeAllWhenUnspecified; // gate for multi-command execution when no explicit selection
   }
 
   public String requestId;

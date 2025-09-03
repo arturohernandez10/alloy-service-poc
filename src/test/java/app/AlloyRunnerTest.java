@@ -18,6 +18,8 @@ public class AlloyRunnerTest {
     req.spec = spec;
     req.options = new SolveRequest.Options();
     req.options.solver = "SAT4J"; // portable
+    // Ensure single-command mode for existing tests
+    req.options.executeAllWhenUnspecified = false;
 
     SolveResponse resp = AlloyRunner.solve(req);
     if (!"ok".equals(resp.status)) {
@@ -50,6 +52,7 @@ public class AlloyRunnerTest {
     req.spec = spec;
     req.options = new SolveRequest.Options();
     req.options.solver = "SAT4J";
+    req.options.executeAllWhenUnspecified = false;
 
     SolveResponse resp = AlloyRunner.solve(req);
     if (!"ok".equals(resp.status)) {
@@ -68,6 +71,7 @@ public class AlloyRunnerTest {
     req.spec = spec;
     req.options = new SolveRequest.Options();
     req.options.solver = "SAT4J";
+    req.options.executeAllWhenUnspecified = false;
 
     SolveResponse resp = AlloyRunner.solve(req);
     assertEquals("error", resp.status);
@@ -86,6 +90,7 @@ public class AlloyRunnerTest {
     req.spec = spec;
     req.options = new SolveRequest.Options();
     req.options.solver = "SAT4J";
+    req.options.executeAllWhenUnspecified = false;
 
     SolveResponse resp = AlloyRunner.solve(req);
     assertEquals("error", resp.status);
@@ -102,7 +107,7 @@ public class AlloyRunnerTest {
         "  \"spec\": \"pred p() {} run p\",\n" +
         "  \"extraneous\": 123,\n" +
         "  \"scope\": { \"max_instances\": 1, \"unknown\": \"x\" },\n" +
-        "  \"options\": { \"timeout_ms\": 10, \"seed\": 1, \"unknown\": true }\n" +
+        "  \"options\": { \"timeout_ms\": 10, \"seed\": 1, \"unknown\": true, \"execute_all_when_unspecified\": false }\n" +
         "}";
     ObjectMapper om = new ObjectMapper();
     SolveRequest req = om.readValue(json, SolveRequest.class);
@@ -121,6 +126,7 @@ public class AlloyRunnerTest {
     req.options = new SolveRequest.Options();
     req.options.solver = "SAT4J";
     req.options.timeoutMs = 1; // very small to trigger timeout
+    req.options.executeAllWhenUnspecified = false;
 
     SolveResponse resp = AlloyRunner.solve(req);
     assertTrue("timeout".equals(resp.status) || (resp.error != null && "timeout".equals(resp.error.type)),
@@ -138,6 +144,7 @@ public class AlloyRunnerTest {
     req1.options = new SolveRequest.Options();
     req1.options.solver = "SAT4J"; // portable path
     req1.options.seed = 123;
+    req1.options.executeAllWhenUnspecified = false;
 
     SolveRequest req2 = new SolveRequest();
     req2.spec = spec;
@@ -146,6 +153,7 @@ public class AlloyRunnerTest {
     req2.options = new SolveRequest.Options();
     req2.options.solver = "SAT4J";
     req2.options.seed = 123;
+    req2.options.executeAllWhenUnspecified = false;
 
     SolveResponse r1 = AlloyRunner.solve(req1);
     SolveResponse r2 = AlloyRunner.solve(req2);
