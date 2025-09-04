@@ -25,6 +25,7 @@ public class OpenApiExamplesTest {
 		req.options = new SolveRequest.Options();
 		req.options.solver = "SAT4J";
 		req.options.timeoutMs = 2000;
+		req.options.executeAllWhenUnspecified = false;
 
 		SolveResponse resp = AlloyRunner.solve(req);
 		assertEquals("ok", resp.status);
@@ -47,6 +48,7 @@ public class OpenApiExamplesTest {
 		req.options = new SolveRequest.Options();
 		req.options.solver = "SAT4J"; // portable path; core will be null
 		req.options.timeoutMs = 2000;
+		req.options.executeAllWhenUnspecified = false;
 
 		SolveResponse resp = AlloyRunner.solve(req);
 		assertEquals("ok", resp.status);
@@ -74,6 +76,7 @@ public class OpenApiExamplesTest {
 		req.options = new SolveRequest.Options();
 		req.options.solver = "SAT4J";
 		req.options.timeoutMs = 1; // force timeout
+		req.options.executeAllWhenUnspecified = false;
 
 		SolveResponse resp = AlloyRunner.solve(req);
 		boolean timedOut = "timeout".equals(resp.status)

@@ -19,6 +19,7 @@ public class AlloyRunnerNativeTest {
     req.spec = spec;
     req.options = new SolveRequest.Options();
     req.options.solver = "MiniSatProverJNI"; // requires native libs (Linux container)
+    req.options.executeAllWhenUnspecified = false;
 
     SolveResponse resp = AlloyRunner.solve(req);
     assertEquals("ok", resp.status, "expected ok envelope for UNSAT");

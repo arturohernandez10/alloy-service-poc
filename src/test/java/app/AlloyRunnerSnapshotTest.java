@@ -26,6 +26,7 @@ public class AlloyRunnerSnapshotTest {
     req.scope.maxInstances = 1; // single instance for snapshot stability
     req.options = new SolveRequest.Options();
     req.options.solver = "SAT4J"; // portable
+    req.options.executeAllWhenUnspecified = false;
 
     SolveResponse resp = AlloyRunner.solve(req);
     assertEquals("ok", resp.status);
